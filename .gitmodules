@@ -1,0 +1,3 @@
+[submodule "device/common/Ring-Buffer"]
+	path = device/common/Ring-Buffer
+	url = git@github.com:AndersKaloer/Ring-Buffer.git
