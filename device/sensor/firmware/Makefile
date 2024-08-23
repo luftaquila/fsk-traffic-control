@@ -69,7 +69,8 @@ Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c \
 Core/Src/system_stm32f4xx.c \
 Core/Src/sysmem.c \
 Core/Src/syscalls.c \
-../../common/Ring-Buffer/ringbuffer.c
+../../common/Ring-Buffer/ringbuffer.c \
+../../common/LoRa/LoRa/LoRa.c
 
 # ASM sources
 ASM_SOURCES =  \
@@ -134,7 +135,9 @@ C_INCLUDES =  \
 -IDrivers/STM32F4xx_HAL_Driver/Inc/Legacy \
 -IDrivers/CMSIS/Device/ST/STM32F4xx/Include \
 -IDrivers/CMSIS/Include \
--I../../common
+-I../../common \
+-I../../common/Ring-Buffer \
+-I../../common/LoRa/LoRa
 
 
 # compile gcc flags
