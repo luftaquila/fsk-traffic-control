@@ -20,9 +20,16 @@ TARGET = firmware
 # building variables
 ######################################
 # debug build?
-DEBUG = 1
+ifndef DEBUG
+DEBUG = 0
+endif
+
 # optimization
+ifeq ($(DEBUG), 1)
 OPT = -Og
+else
+OPT = -Os
+endif
 
 
 #######################################
@@ -125,7 +132,8 @@ C_INCLUDES =  \
 -IDrivers/STM32F4xx_HAL_Driver/Inc \
 -IDrivers/STM32F4xx_HAL_Driver/Inc/Legacy \
 -IDrivers/CMSIS/Device/ST/STM32F4xx/Include \
--IDrivers/CMSIS/Include
+-IDrivers/CMSIS/Include \
+-I../../common
 
 
 # compile gcc flags
@@ -200,5 +208,45 @@ clean:
 # dependencies
 #######################################
 -include $(wildcard $(BUILD_DIR)/*.d)
+
+#######################################
+# debug mode
+#######################################
+debug:
+	make DEBUG=1
+
+#######################################
+# program
+#######################################
+program:
+	make && openocd -f fsk-traffic-sensor.cfg
+
+#######################################
+# attach
+#######################################
+attach:
+	openocd -f interface/stlink.cfg -f target/stm32f4x.cfg
+
+#######################################
+# gdb
+#######################################
+gdb:
+	arm-none-eabi-gdb -x debug.gdb
+
+#######################################
+# dump
+#######################################
+dump:
+ifdef GCC_PATH
+	$(GCC_PATH)/$(PREFIX)objdump -dS ./build/firmware.elf > dump.txt
+else
+	$(PREFIX)objdump -dS ./build/firmware.elf > dump.txt
+endif
+
+#######################################
+# list usb devices (Windows PowerShell)
+#######################################
+list:
+	pwsh -Command 'Get-PnpDevice -PresentOnly | Where-Object { $$_.InstanceId -match "^USB" }'
 
 # *** EOF ***
