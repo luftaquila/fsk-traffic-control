@@ -24,17 +24,21 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "LoRa.h"
+#include <stdint.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef enum {
+  MODE_START,
+} mode_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define true  (1)
+#define false (0)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,7 +49,12 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+LoRa rf;
 
+uint32_t exti_sensor = false;
+uint32_t exti_rf = false;
+
+uint32_t mode = MODE_START;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -56,7 +65,17 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+  // sensor detection
+  if (GPIO_Pin == SENSOR_Pin) {
 
+  }
+
+  // RF data received
+  else if (GPIO_Pin == DIO0_Pin) {
+
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -91,13 +110,32 @@ int main(void)
   MX_SPI2_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+  // init Ra-01H LoRa transceiver
+  rf = newLoRa();
+  rf.CS_port = NSS_GPIO_Port;
+  rf.CS_pin = NSS_Pin;
+  rf.reset_port = RST_GPIO_Port;
+  rf.reset_pin = RST_Pin;
+  rf.DIO0_port = DIO0_GPIO_Port;
+  rf.DIO0_pin = DIO0_Pin;
+  rf.hSPIx = &hspi2;
 
+  rf.frequency = 923; // CH 30 922.9 Mhz
+  rf.spredingFactor = SF_10;
+  rf.bandWidth = BW_125KHz;
+  rf.crcRate = CR_4_5;
+  rf.power = POWER_14db; // 25 mW
+  rf.overCurrentProtection = 100; // 100 mA
+  rf.preamble = 8;
+
+  if (LoRa_init(&rf) != LORA_OK) {
+    Error_Handler();
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+  while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -162,9 +200,9 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
+  while (1) {
+    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+    HAL_Delay(100);
   }
   /* USER CODE END Error_Handler_Debug */
 }
