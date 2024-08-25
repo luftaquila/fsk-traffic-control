@@ -65,8 +65,10 @@ void Error_Handler(void);
 #define RST_GPIO_Port GPIOA
 #define DIO0_Pin GPIO_PIN_10
 #define DIO0_GPIO_Port GPIOA
+#define DIO0_EXTI_IRQn EXTI15_10_IRQn
 #define SENSOR_Pin GPIO_PIN_9
 #define SENSOR_GPIO_Port GPIOB
+#define SENSOR_EXTI_IRQn EXTI9_5_IRQn
 
 /* USER CODE BEGIN Private defines */
 
