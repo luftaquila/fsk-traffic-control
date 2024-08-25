@@ -65,6 +65,11 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+int _write(int file, uint8_t *ptr, int len) {
+  HAL_UART_Transmit(&huart1, (uint8_t *)ptr, (uint16_t)len, 30);
+  return (len);
+}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   // sensor detection
   if (GPIO_Pin == SENSOR_Pin) {
@@ -108,7 +113,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_SPI2_Init();
-  MX_USART2_UART_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   // init Ra-01H LoRa transceiver
   rf = newLoRa();
@@ -121,7 +126,7 @@ int main(void)
   rf.hSPIx = &hspi2;
 
   rf.frequency = 923; // CH 30 922.9 Mhz
-  rf.spredingFactor = SF_10;
+  rf.spredingFactor = SF_7;
   rf.bandWidth = BW_125KHz;
   rf.crcRate = CR_4_5;
   rf.power = POWER_14db; // 25 mW
@@ -131,6 +136,8 @@ int main(void)
   if (LoRa_init(&rf) != LORA_OK) {
     Error_Handler();
   }
+
+  LoRa_startReceiving(&rf);
   /* USER CODE END 2 */
 
   /* Infinite loop */
