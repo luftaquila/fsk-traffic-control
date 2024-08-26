@@ -38,8 +38,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define true  (1)
-#define false (0)
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -54,6 +53,8 @@ LoRa rf;
 
 uint32_t exti_sensor = false;
 uint32_t exti_rf = false;
+
+uint8_t id = DEVICE_ID_INVALID;
 
 uint32_t mode = MODE_STARTUP;
 /* USER CODE END PV */
@@ -74,7 +75,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
   // RF data received
   else if (GPIO_Pin == DIO0_Pin) {
-    printf("dio0 trig\n");
 
   }
 }
@@ -113,6 +113,9 @@ int main(void)
   MX_USART1_UART_Init();
   MX_CRC_Init();
   /* USER CODE BEGIN 2 */
+  // get device id
+  id = get_device_id();
+
   // init Ra-01H LoRa transceiver
   rf = newLoRa();
   rf.CS_port = NSS_GPIO_Port;
@@ -135,13 +138,20 @@ int main(void)
     Error_Handler();
   }
 
+  // start LSNTP time sync
   LoRa_startReceiving(&rf);
-
   mode = MODE_LSNTP;
+
+  for (int i = 0; i < LSNTP_ITER_COUNT; i++) {
+    // do LSNTP
+
+  } 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  mode = MODE_OPERATION;
+
   while (1) {
     /* USER CODE END WHILE */
 

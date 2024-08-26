@@ -4,8 +4,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "main.h"
 #include "crc.h"
 #include "usart.h"
+
+#define true  (1)
+#define false (0)
 
 /*******************************************************************************
  * device operation mode
@@ -15,6 +19,33 @@ typedef enum {
   MODE_LSNTP,
   MODE_OPERATION,
 } operation_mode_t;
+
+/*******************************************************************************
+ * get device id from the flash
+ ******************************************************************************/
+
+// RM0368 Table 5. Flash module organization (STM32F401xB/C and STM32F401xD/E)
+#define FLASH_SECTOR_DEVICE_ID (0x08020000) // Sector 5 (128 KB). ~ 0x0803FFFF
+#define FLASH_ADDR_DEVICE_ID_CANARY (FLASH_SECTOR_DEVICE_ID + 0x0001FF00)
+#define FLASH_ADDR_DEVICE_ID        (FLASH_ADDR_DEVICE_ID_CANARY + 4)
+#define FLASH_DEVICE_ID_CANARY_VALUE (0xBADACAFE)
+
+#define DEVICE_ID_INVALID (0xFF)
+
+static inline uint8_t get_device_id(void) {
+  // device id canary mismatch
+  if (*(uint32_t *)FLASH_ADDR_DEVICE_ID_CANARY != FLASH_DEVICE_ID_CANARY_VALUE) {
+    Error_Handler();
+  }
+
+  uint8_t id = *(uint8_t *)FLASH_ADDR_DEVICE_ID;
+
+  if (id == DEVICE_ID_INVALID) {
+    Error_Handler();
+  }
+
+  return id;
+}
 
 /*******************************************************************************
  * LoRa typedefs and definitions
@@ -42,7 +73,7 @@ typedef struct {
   uint8_t protocol;  // lora mesage type
   uint8_t sender;    // sender device id
   uint8_t receiver;  // receiver device id
-  uint8_t _reserved; // reserved for future use
+  uint8_t sequence;  // sequence number for repeated requests
   uint32_t checksum; // CRC checksum
 } lora_header_t;
 
@@ -89,6 +120,7 @@ static inline int32_t lora_verify(uint8_t id, lora_header_t *header, uint32_t *p
  * LoRa Simple Network Time Protocol (LSNTP) implementation
  * from RFC 4330 (https://datatracker.ietf.org/doc/html/rfc4330) Page 13
  ******************************************************************************/
+#define LSNTP_ITER_COUNT (5)
 
 typedef struct {
   int32_t client_req_tx; // time request sent by client
