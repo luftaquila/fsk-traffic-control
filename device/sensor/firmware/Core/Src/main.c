@@ -25,15 +25,15 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "LoRa.h"
 #include <stdint.h>
+
+#include "LoRa.h"
+#include "common.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef enum {
-  MODE_START,
-} mode_t;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -55,7 +55,7 @@ LoRa rf;
 uint32_t exti_sensor = false;
 uint32_t exti_rf = false;
 
-uint32_t mode = MODE_START;
+uint32_t mode = MODE_STARTUP;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -66,11 +66,6 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int _write(int file, uint8_t *ptr, int len) {
-  HAL_UART_Transmit(&huart1, (uint8_t *)ptr, (uint16_t)len, 30);
-  return (len);
-}
-
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   // sensor detection
   if (GPIO_Pin == SENSOR_Pin) {
@@ -141,18 +136,13 @@ int main(void)
   }
 
   LoRa_startReceiving(&rf);
+
+  mode = MODE_LSNTP;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-    // uint8_t ret = LoRa_transmit(&rf, "test", 4, 300);
-    // printf("%d ret: %d\r\n", HAL_GetTick(), ret);
-    // HAL_Delay(100);
-    uint8_t rcv[32];
-    uint32_t ret = LoRa_receive(&rf, rcv, 10);
-    printf("rcv: %d, %.*s\n", ret, ret, rcv);
-    HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

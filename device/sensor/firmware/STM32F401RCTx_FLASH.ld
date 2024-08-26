@@ -109,7 +109,7 @@ SECTIONS
     __exidx_end = .;
   } >FLASH
 
-  .preinit_array  (READONLY) :
+  .preinit_array (READONLY) :
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array*))
