@@ -105,6 +105,7 @@ typedef struct {
  * @param [in] size   lora packet size
  */
 static inline void lora_set_checksum(lora_header_t *header, uint32_t size) {
+  header->size = size;
   header->checksum = 0;
   header->checksum = HAL_CRC_Calculate(&hcrc, (uint32_t *)header, size / sizeof(uint32_t));
 }
@@ -124,7 +125,7 @@ static inline int32_t lora_verify(uint8_t id, lora_header_t *header, uint32_t si
     return LORA_STATUS_ERR_CHECKSUM;
   }
 
-  if (header->receiver != id) {
+  if (header->receiver != id || header->receiver != LORA_ID_BROADCAST) {
     return LORA_STATUS_ERR_NOT_ME;
   }
 

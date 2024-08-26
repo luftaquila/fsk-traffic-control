@@ -22,6 +22,7 @@
 #include "spi.h"
 #include "stm32f4xx_hal.h"
 #include "usart.h"
+#include "usb_otg.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -52,16 +53,12 @@
 /* USER CODE BEGIN PV */
 LoRa rf;
 
-uint32_t exti_sensor = false;
 uint32_t exti_rf = false;
 uint32_t exti_rf_timestamp = 0;
 
 uint8_t id = DEVICE_ID_INVALID;
-uint8_t controller_id = DEVICE_ID_INVALID;
 
 uint32_t mode = MODE_STARTUP;
-
-int32_t lsntp_offset = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,16 +70,11 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-  // sensor detection
-  if (GPIO_Pin == SENSOR_Pin) {
-    exti_sensor = true;
-  }
-
   // RF data received
-  else if (GPIO_Pin == DIO0_Pin) {
+  if (GPIO_Pin == DIO0_Pin) {
     exti_rf = true;
     exti_rf_timestamp = HAL_GetTick();
-    DEBUG_MSG("rcv!\n");
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
   }
 }
 /* USER CODE END 0 */
@@ -117,8 +109,9 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_SPI2_Init();
-  MX_USART1_UART_Init();
   MX_CRC_Init();
+  MX_USART1_UART_Init();
+  MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 
@@ -151,108 +144,44 @@ int main(void)
   // start LSNTP time sync
   LoRa_startReceiving(&rf);
   mode = MODE_LSNTP;
+  /* USER CODE END 2 */
 
-  /*****************************************************************************
-   * do LSNTP
-   ****************************************************************************/
-  lora_lsntp_t packet;
-  packet.header.size = sizeof(lora_lsntp_t);
-  packet.header.protocol = LORA_LSNTP_REQ;
-  packet.header.sender = id;
-  packet.header.receiver = 0;
-
-  int32_t seq = 0;
-  int32_t success = 0;
-  int32_t transmit_new_req = true;
-  int32_t offset[LSNTP_ITER_COUNT];
-
-  DEBUG_MSG("start LSNTP\n");
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  uint8_t buf[128];
 
   while (true) {
-    // too many failures
-    if (seq > 15) {
-      Error_Handler();
-    }
+    // wait for the request
+    while (!exti_rf);
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 
-    if (transmit_new_req) {
-      packet.header.sequence = seq;
-      packet.client_req_tx = HAL_GetTick();
-      lora_set_checksum(&packet.header, sizeof(lora_lsntp_t));
-      LoRa_transmit(&rf, (uint8_t *)&packet, sizeof(lora_lsntp_t), 500);
-
-      DEBUG_MSG("LSNTP req #%ld\n", seq);
-
-      seq++;
-      transmit_new_req = false;
-    }
-
-    // busy wait for the reply
-    while (!exti_rf) {
-      // 500ms timeout
-      if (HAL_GetTick() > packet.client_req_tx + 500) {
-        transmit_new_req = true;
-        break;
-      }
-    }
-
-    // timeout; make new request
-    if (transmit_new_req) {
-      DEBUG_MSG("  timeout!\n");
-      continue;
-    }
-
-    // parse received packet
-    uint8_t buf[128];
     lora_lsntp_t *pkt = (lora_lsntp_t *)buf;
     uint8_t recv_bytes = LoRa_receive(&rf, buf, sizeof(lora_lsntp_t));
     exti_rf = false;
 
     // no full packet received
     if (recv_bytes != sizeof(lora_lsntp_t)) {
-      DEBUG_MSG("  packet length mismatch; received: %d, expected: %d\n", recv_bytes, sizeof(lora_lsntp_t));
       continue;
     }
 
     // checksum failure
     if (lora_verify(id, &pkt->header, sizeof(lora_lsntp_t)) == LORA_STATUS_OK) {
-      DEBUG_MSG("  packet checksum mismatch; received: 0x%08lx\n", pkt->header.checksum);
       continue;
     }
 
     // wrong packet
-    if (pkt->header.protocol != LORA_LSNTP_RES || pkt->header.sequence != packet.header.sequence) {
-      DEBUG_MSG("  packet mismatch; received: %d(%d), expected: %d(%d)\n",
-                pkt->header.protocol, pkt->header.sequence, LORA_LSNTP_RES, packet.header.sequence);
+    if (pkt->header.protocol != LORA_LSNTP_REQ) {
       continue;
     }
 
-    // calculate offset
-    pkt->client_res_rx = exti_rf_timestamp;
-    offset[success] = lsntp_calc_offset(pkt);
-    lsntp_offset += offset[success];
-    DEBUG_MSG("  offset: %ld\n", offset[success]);
+    pkt->header.protocol = LORA_LSNTP_RES;
+    pkt->header.receiver = pkt->header.sender;
+    pkt->header.sender = id;
+    pkt->server_req_rx = exti_rf_timestamp;
+    pkt->server_res_tx = HAL_GetTick();
+    lora_set_checksum(&pkt->header, sizeof(lora_lsntp_t));
+    LoRa_transmit(&rf, (uint8_t *)pkt, sizeof(lora_lsntp_t), 500);
 
-    // set controller id
-    controller_id = pkt->header.sender;
-
-    success++;
-    transmit_new_req = true;
-
-    if (success >= LSNTP_ITER_COUNT) {
-      break;
-    }
-  }
-
-  lsntp_offset /= LSNTP_ITER_COUNT;
-  DEBUG_MSG("done LSNTP. controller: %ld, offset: %ld\n", controller_id, lsntp_offset);
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  mode = MODE_OPERATION;
-  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-
-  while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -282,9 +211,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 25;
-  RCC_OscInitStruct.PLL.PLLN = 168;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLN = 336;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();

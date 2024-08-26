@@ -26,7 +26,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdint.h>
 
+#include "LoRa.h"
+#include "common.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,7 +50,13 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+LoRa rf;
 
+uint32_t exti_rf = false;
+
+uint8_t id = DEVICE_ID_INVALID;
+
+uint32_t mode = MODE_STARTUP;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,7 +67,12 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+  // RF data received
+  if (GPIO_Pin == DIO0_Pin) {
+    exti_rf = true;
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -95,13 +109,43 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+
+  // get device id
+  id = get_device_id();
+  DEBUG_MSG("id: %d\n", id);
+
+  // init Ra-01H LoRa transceiver
+  rf = newLoRa();
+  rf.CS_port = NSS_GPIO_Port;
+  rf.CS_pin = NSS_Pin;
+  rf.reset_port = RST_GPIO_Port;
+  rf.reset_pin = RST_Pin;
+  rf.DIO0_port = DIO0_GPIO_Port;
+  rf.DIO0_pin = DIO0_Pin;
+  rf.hSPIx = &hspi2;
+
+  rf.frequency = 923;             // CH 30 922.9 Mhz
+  rf.spredingFactor = SF_7;
+  rf.bandWidth = BW_125KHz;
+  rf.crcRate = CR_4_5;
+  rf.power = POWER_14db;          // 25 mW
+  rf.overCurrentProtection = 100; // 100 mA
+  rf.preamble = 8;
+
+  if (LoRa_init(&rf) != LORA_OK) {
+    Error_Handler();
+  }
+
+  // start LSNTP time sync
+  LoRa_startReceiving(&rf);
+  mode = MODE_LSNTP;
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+  while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
