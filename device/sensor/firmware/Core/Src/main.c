@@ -55,8 +55,11 @@ uint32_t exti_sensor = false;
 uint32_t exti_rf = false;
 
 uint8_t id = DEVICE_ID_INVALID;
+uint8_t controller_id = DEVICE_ID_INVALID;
 
 uint32_t mode = MODE_STARTUP;
+
+int32_t lsntp_offset = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,12 +73,12 @@ void SystemClock_Config(void);
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   // sensor detection
   if (GPIO_Pin == SENSOR_Pin) {
-
+    exti_sensor = true;
   }
 
   // RF data received
   else if (GPIO_Pin == DIO0_Pin) {
-
+    exti_rf = true;
   }
 }
 /* USER CODE END 0 */
@@ -113,8 +116,11 @@ int main(void)
   MX_USART1_UART_Init();
   MX_CRC_Init();
   /* USER CODE BEGIN 2 */
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+
   // get device id
   id = get_device_id();
+  DEBUG_MSG("id: %d\n", id);
 
   // init Ra-01H LoRa transceiver
   rf = newLoRa();
@@ -126,11 +132,11 @@ int main(void)
   rf.DIO0_pin = DIO0_Pin;
   rf.hSPIx = &hspi2;
 
-  rf.frequency = 923; // CH 30 922.9 Mhz
+  rf.frequency = 923;             // CH 30 922.9 Mhz
   rf.spredingFactor = SF_7;
   rf.bandWidth = BW_125KHz;
   rf.crcRate = CR_4_5;
-  rf.power = POWER_14db; // 25 mW
+  rf.power = POWER_14db;          // 25 mW
   rf.overCurrentProtection = 100; // 100 mA
   rf.preamble = 8;
 
@@ -142,15 +148,100 @@ int main(void)
   LoRa_startReceiving(&rf);
   mode = MODE_LSNTP;
 
-  for (int i = 0; i < LSNTP_ITER_COUNT; i++) {
-    // do LSNTP
+  /*****************************************************************************
+   * do LSNTP
+   ****************************************************************************/
+  lora_lsntp_t packet;
+  packet.header.size = sizeof(lora_lsntp_t);
+  packet.header.protocol = LORA_LSNTP_REQ;
+  packet.header.sender = id;
+  packet.header.receiver = 0;
 
-  } 
+  int32_t seq = 0;
+  int32_t success = 0;
+  int32_t transmit_new_req = true;
+  int32_t offset[LSNTP_ITER_COUNT];
+
+  DEBUG_MSG("start LSNTP\n");
+
+  while (true) {
+    // too many failures
+    if (seq > 15) {
+      Error_Handler();
+    }
+
+    if (transmit_new_req) {
+      packet.header.sequence = seq;
+      packet.client_req_tx = HAL_GetTick();
+      lora_set_checksum(&packet.header, sizeof(packet));
+      LoRa_transmit(&rf, (uint8_t *)&packet, sizeof(packet), 500);
+
+      DEBUG_MSG("LSNTP req #%ld\n", seq);
+
+      seq++;
+      transmit_new_req = false;
+    }
+
+    // busy wait for the reply
+    while (!exti_rf) {
+      // 500ms timeout
+      if (HAL_GetTick() > packet.client_req_tx + 500) {
+        transmit_new_req = true;
+        break;
+      }
+    }
+
+    // timeout; make new request
+    if (transmit_new_req) {
+      DEBUG_MSG("  timeout!\n");
+      continue;
+    }
+
+    // parse received packet
+    uint8_t buf[128];
+    lora_lsntp_t *pkt = (lora_lsntp_t *)buf;
+    uint8_t recv_bytes = LoRa_receive(&rf, buf, sizeof(packet));
+
+    // no full packet received
+    if (recv_bytes != sizeof(packet)) {
+      continue;
+    }
+
+    // checksum failure
+    if (lora_verify(id, &pkt->header, sizeof(packet)) == LORA_STATUS_OK) {
+      continue;
+    }
+
+    // wrong packet
+    if (pkt->header.protocol != LORA_LSNTP_RES || pkt->header.sequence != seq) {
+      continue;
+    }
+
+    // calculate offset
+    pkt->client_res_rx = HAL_GetTick();
+    offset[success] = lsntp_calc_offset(pkt);
+    lsntp_offset += offset[success];
+    DEBUG_MSG("  offset: %ld\n", offset[success]);
+
+    // set controller id
+    controller_id = pkt->header.sender;
+
+    success++;
+    transmit_new_req = true;
+
+    if (success >= LSNTP_ITER_COUNT) {
+      break;
+    }
+  }
+
+  lsntp_offset /= LSNTP_ITER_COUNT;
+  DEBUG_MSG("done LSNTP. offset: %ld\n", lsntp_offset);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   mode = MODE_OPERATION;
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
   while (1) {
     /* USER CODE END WHILE */
@@ -217,6 +308,8 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+  DEBUG_MSG("ERROR!\n");
+
   while (1) {
     HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
     HAL_Delay(100);

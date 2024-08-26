@@ -148,7 +148,7 @@ ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffuncti
 CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -Wno-comment -fdata-sections -ffunction-sections
 
 ifeq ($(DEBUG), 1)
-CFLAGS += -g -gdwarf-2
+CFLAGS += -g -gdwarf-2 -DDEBUG
 endif
 
 
@@ -219,7 +219,7 @@ clean:
 # debug mode
 #######################################
 debug:
-	make DEBUG=1
+	make DEBUG=1 && openocd -f fsk-traffic-sensor.cfg
 
 #######################################
 # program
@@ -254,17 +254,3 @@ endif
 #######################################
 list:
 	pwsh -Command 'Get-PnpDevice -PresentOnly | Where-Object { $$_.InstanceId -match "^USB" }'
-
-#######################################
-# write device id to the flash memory
-#######################################
-setid:
-	openocd -f interface/stlink.cfg -f target/stm32f4x.cfg \
-    -c "init" -c "reset halt" \
-    -c "stm32f4x unlock 0" \
-    -c "mww 0x0803FF00 0xBADACAFE" \
-    -c "mww 0x0803FF04 $$(printf '0x%08X' $(ID))" \
-    -c "stm32f4x lock 0" \
-    -c "reset run" -c "shutdown"
-
-# *** EOF ***
