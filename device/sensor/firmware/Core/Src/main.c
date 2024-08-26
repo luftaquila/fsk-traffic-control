@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "crc.h"
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
@@ -78,6 +79,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
   // RF data received
   else if (GPIO_Pin == DIO0_Pin) {
+    printf("dio0 trig\n");
 
   }
 }
@@ -114,6 +116,7 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI2_Init();
   MX_USART1_UART_Init();
+  MX_CRC_Init();
   /* USER CODE BEGIN 2 */
   // init Ra-01H LoRa transceiver
   rf = newLoRa();
@@ -143,6 +146,13 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
+    // uint8_t ret = LoRa_transmit(&rf, "test", 4, 300);
+    // printf("%d ret: %d\r\n", HAL_GetTick(), ret);
+    // HAL_Delay(100);
+    uint8_t rcv[32];
+    uint32_t ret = LoRa_receive(&rf, rcv, 10);
+    printf("rcv: %d, %.*s\n", ret, ret, rcv);
+    HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
