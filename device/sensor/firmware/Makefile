@@ -255,4 +255,16 @@ endif
 list:
 	pwsh -Command 'Get-PnpDevice -PresentOnly | Where-Object { $$_.InstanceId -match "^USB" }'
 
+#######################################
+# write device id to the flash memory
+#######################################
+setid:
+	openocd -f interface/stlink.cfg -f target/stm32f4x.cfg \
+    -c "init" -c "reset halt" \
+    -c "stm32f4x unlock 0" \
+    -c "mww 0x0803FF00 0xBADACAFE" \
+    -c "mww 0x0803FF04 $$(printf '0x%08X' $(ID))" \
+    -c "stm32f4x lock 0" \
+    -c "reset run" -c "shutdown"
+
 # *** EOF ***
