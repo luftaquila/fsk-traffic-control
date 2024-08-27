@@ -50,12 +50,14 @@ typedef enum {
 static inline uint8_t get_device_id(void) {
   // device id canary mismatch
   if (*(uint32_t *)FLASH_ADDR_DEVICE_ID_CANARY != FLASH_DEVICE_ID_CANARY_VALUE) {
+    DEBUG_MSG("flash memory device id canary mismatch\n");
     Error_Handler();
   }
 
   uint8_t id = *(uint8_t *)FLASH_ADDR_DEVICE_ID;
 
   if (id == DEVICE_ID_INVALID) {
+    DEBUG_MSG("flash memory device id invalid\n");
     Error_Handler();
   }
 
@@ -78,6 +80,7 @@ typedef enum {
   LORA_LSNTP_REQ,     // LSNTP time request from client
   LORA_LSNTP_RES,     // LSNTP time reply from server
   LORA_SENSOR_REPORT, // sensor detection detection
+  LORA_READY,         // sensor LSNTP complete and ready to go
   LORA_ACK,           // ack
 } lora_protocol_t;
 
@@ -169,10 +172,12 @@ typedef struct {
 } lora_sensor_report_t;
 
 /*******************************************************************************
- * LoRa simple ACK
+ * LoRa ready and ACK
  ******************************************************************************/
 typedef struct {
   lora_header_t header;
-} lora_ack_t;
+} lora_ready_t;
+
+typedef lora_ready_t lora_ack_t;
 
 #endif /* COMMON_H */

@@ -53,6 +53,8 @@
 LoRa rf;
 
 uint32_t exti_sensor = false;
+uint32_t exti_sensor_timestamp = 0;
+
 uint32_t exti_rf = false;
 uint32_t exti_rf_timestamp = 0;
 
@@ -62,6 +64,8 @@ uint8_t controller_id = DEVICE_ID_INVALID;
 uint32_t mode = MODE_STARTUP;
 
 int32_t lsntp_offset = 0;
+
+uint8_t buf[UINT8_MAX];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -76,6 +80,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   // sensor detection
   if (GPIO_Pin == SENSOR_Pin) {
     exti_sensor = true;
+    exti_sensor_timestamp = HAL_GetTick();
+    DEBUG_MSG("sensor!\n");
   }
 
   // RF data received
@@ -145,6 +151,7 @@ int main(void)
   rf.preamble = 8;
 
   if (LoRa_init(&rf) != LORA_OK) {
+    DEBUG_MSG("LoRa init failed\n");
     Error_Handler();
   }
 
@@ -161,9 +168,9 @@ int main(void)
   packet.header.sender = id;
   packet.header.receiver = 0;
 
-  int32_t seq = 0;
+  uint8_t seq = 0;
   int32_t success = 0;
-  int32_t transmit_new_req = true;
+  int32_t retransmit = true;
   int32_t offset[LSNTP_ITER_COUNT];
 
   DEBUG_MSG("start LSNTP\n");
@@ -171,49 +178,49 @@ int main(void)
   while (true) {
     // too many failures
     if (seq > 15) {
+      DEBUG_MSG("too many lsntp retry\n");
       Error_Handler();
     }
 
-    if (transmit_new_req) {
+    if (retransmit) {
       packet.header.sequence = seq;
       packet.client_req_tx = HAL_GetTick();
       lora_set_checksum(&packet.header, sizeof(lora_lsntp_t));
       LoRa_transmit(&rf, (uint8_t *)&packet, sizeof(lora_lsntp_t), 500);
 
-      DEBUG_MSG("LSNTP req #%ld\n", seq);
+      DEBUG_MSG("LSNTP req #%u\n", seq);
 
       seq++;
-      transmit_new_req = false;
+      retransmit = false;
     }
 
     // busy wait for the reply
     while (!exti_rf) {
       // 500ms timeout
       if (HAL_GetTick() > packet.client_req_tx + 500) {
-        transmit_new_req = true;
+        retransmit = true;
         break;
       }
     }
 
     // timeout; make new request
-    if (transmit_new_req) {
+    if (retransmit) {
       DEBUG_MSG("  timeout!\n");
       continue;
     }
 
     // parse received packet
-    uint8_t buf[128];
     lora_lsntp_t *pkt = (lora_lsntp_t *)buf;
     uint8_t recv_bytes = LoRa_receive(&rf, buf, sizeof(lora_lsntp_t));
     exti_rf = false;
 
     // no full packet received
     if (recv_bytes != sizeof(lora_lsntp_t)) {
-      DEBUG_MSG("  packet length mismatch; received: %d, expected: %d\n", recv_bytes, sizeof(lora_lsntp_t));
+      DEBUG_MSG("  packet length mismatch; received: %u, expected: %u\n", recv_bytes, sizeof(lora_lsntp_t));
       continue;
     }
 
-    // checksum failure
+    // checksum or receiver check failure
     if (lora_verify(id, &pkt->header, sizeof(lora_lsntp_t)) == LORA_STATUS_OK) {
       DEBUG_MSG("  packet checksum mismatch; received: 0x%08lx\n", pkt->header.checksum);
       continue;
@@ -221,7 +228,7 @@ int main(void)
 
     // wrong packet
     if (pkt->header.protocol != LORA_LSNTP_RES || pkt->header.sequence != packet.header.sequence) {
-      DEBUG_MSG("  packet mismatch; received: %d(%d), expected: %d(%d)\n",
+      DEBUG_MSG("  packet mismatch; received: %u(%u), expected: %u(%u)\n",
                 pkt->header.protocol, pkt->header.sequence, LORA_LSNTP_RES, packet.header.sequence);
       continue;
     }
@@ -236,7 +243,7 @@ int main(void)
     controller_id = pkt->header.sender;
 
     success++;
-    transmit_new_req = true;
+    retransmit = true;
 
     if (success >= LSNTP_ITER_COUNT) {
       break;
@@ -244,15 +251,156 @@ int main(void)
   }
 
   lsntp_offset /= LSNTP_ITER_COUNT;
-  DEBUG_MSG("done LSNTP. controller: %ld, offset: %ld\n", controller_id, lsntp_offset);
+  DEBUG_MSG("done LSNTP. controller: %u, offset: %ld\n", controller_id, lsntp_offset);
+
+  /*****************************************************************************
+   * send READY and wait for ACK
+   ****************************************************************************/
+  lora_ready_t ready_packet;
+  ready_packet.header.size = sizeof(lora_ready_t);
+  ready_packet.header.protocol = LORA_READY;
+  ready_packet.header.sender = id;
+  ready_packet.header.receiver = controller_id;
+
+  seq = 0;
+  retransmit = true;
+  uint32_t transmit_time = 0;
+
+  while (true) {
+    if (seq > 15) {
+      seq = 0;
+    }
+
+    ready_packet.header.sequence = seq;
+    lora_set_checksum(&ready_packet.header, sizeof(lora_ready_t));
+    LoRa_transmit(&rf, (uint8_t *)&ready_packet, sizeof(lora_ready_t), 500);
+    transmit_time = HAL_GetTick();
+
+    DEBUG_MSG("READY #%u\n", seq);
+
+    seq++;
+    retransmit = false;
+
+    // busy wait for the ACK
+    while (!exti_rf) {
+      // 500ms timeout
+      if (HAL_GetTick() > transmit_time + 500) {
+        retransmit = true;
+        break;
+      }
+    }
+
+    if (retransmit) {
+      DEBUG_MSG("  timeout!\n");
+      continue;
+    }
+
+    // parse received packet
+    lora_ack_t *pkt = (lora_ack_t *)buf;
+    uint8_t recv_bytes = LoRa_receive(&rf, buf, sizeof(lora_ack_t));
+    exti_rf = false;
+
+    // no full packet received
+    if (recv_bytes != sizeof(lora_ack_t)) {
+      DEBUG_MSG("  packet length mismatch; received: %u, expected: %u\n", recv_bytes, sizeof(lora_ack_t));
+      continue;
+    }
+
+    // checksum or receiver check failure
+    if (lora_verify(id, &pkt->header, sizeof(lora_ack_t)) == LORA_STATUS_OK) {
+      DEBUG_MSG("  packet checksum mismatch; received: 0x%08lx\n", pkt->header.checksum);
+      continue;
+    }
+
+    // wrong packet
+    if (pkt->header.protocol != LORA_ACK || pkt->header.sequence != packet.header.sequence) {
+      DEBUG_MSG("  packet mismatch; received: %u(%u), expected: %u(%u)\n",
+                pkt->header.protocol, pkt->header.sequence, LORA_ACK, packet.header.sequence);
+      continue;
+    }
+
+    break;
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  /*****************************************************************************
+   * watch sensor and report on detection
+   ****************************************************************************/
   mode = MODE_OPERATION;
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
+  lora_sensor_report_t report_packet;
+  report_packet.header.size = sizeof(lora_sensor_report_t);
+  report_packet.header.protocol = LORA_SENSOR_REPORT;
+  report_packet.header.sender = id;
+  report_packet.header.receiver = controller_id;
+  report_packet.timestamp = exti_sensor_timestamp;
+
   while (1) {
+    if (exti_sensor) {
+      seq = 0;
+      retransmit = true;
+
+      while (true) {
+        if (seq > 15) {
+          seq = 0;
+        }
+
+        report_packet.header.sequence = seq;
+        lora_set_checksum(&report_packet.header, sizeof(lora_sensor_report_t));
+        LoRa_transmit(&rf, (uint8_t *)&report_packet, sizeof(lora_sensor_report_t), 500);
+        transmit_time = HAL_GetTick();
+
+        DEBUG_MSG("REPORT #%u\n", seq);
+
+        seq++;
+        retransmit = false;
+
+        // busy wait for the ACK
+        while (!exti_rf) {
+          // 500ms timeout
+          if (HAL_GetTick() > transmit_time + 500) {
+            retransmit = true;
+            break;
+          }
+        }
+
+        if (retransmit) {
+          DEBUG_MSG("  timeout!\n");
+          continue;
+        }
+
+        // parse received packet
+        lora_ack_t *pkt = (lora_ack_t *)buf;
+        uint8_t recv_bytes = LoRa_receive(&rf, buf, sizeof(lora_ack_t));
+        exti_rf = false;
+
+        // no full packet received
+        if (recv_bytes != sizeof(lora_ack_t)) {
+          DEBUG_MSG("  packet length mismatch; received: %u, expected: %u\n", recv_bytes, sizeof(lora_ack_t));
+          continue;
+        }
+
+        // checksum or receiver check failure
+        if (lora_verify(id, &pkt->header, sizeof(lora_ack_t)) == LORA_STATUS_OK) {
+          DEBUG_MSG("  packet checksum mismatch; received: 0x%08lx\n", pkt->header.checksum);
+          continue;
+        }
+
+        // wrong packet
+        if (pkt->header.protocol != LORA_ACK || pkt->header.sequence != packet.header.sequence) {
+          DEBUG_MSG("  packet mismatch; received: %u(%u), expected: %u(%u)\n",
+                    pkt->header.protocol, pkt->header.sequence, LORA_ACK, packet.header.sequence);
+          continue;
+        }
+
+        break;
+      }
+
+      exti_sensor = false;
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
