@@ -39,7 +39,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define DEVICE_SENSOR
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -130,7 +130,7 @@ int main(void)
 
   // get device id
   id = get_device_id();
-  DEBUG_MSG("id: %d\n", id);
+  DEBUG_MSG("id: %u\n", id);
 
   // init Ra-01H LoRa transceiver
   rf = newLoRa();

@@ -39,7 +39,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define DEVICE_CONTROLLER
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -53,10 +53,14 @@
 LoRa rf;
 
 uint32_t exti_rf = false;
+uint32_t exti_rf_timestamp = 0;
 
 uint8_t id = DEVICE_ID_INVALID;
 
 uint32_t mode = MODE_STARTUP;
+
+uint8_t buf[UINT8_MAX];
+uint8_t usb_buf[UINT8_MAX];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,6 +75,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   // RF data received
   if (GPIO_Pin == DIO0_Pin) {
     exti_rf = true;
+    exti_rf_timestamp = HAL_GetTick();
+    DEBUG_MSG("rcv!\n");
   }
 }
 /* USER CODE END 0 */
@@ -113,7 +119,7 @@ int main(void)
 
   // get device id
   id = get_device_id();
-  DEBUG_MSG("id: %d\n", id);
+  DEBUG_MSG("id: %u\n", id);
 
   // init Ra-01H LoRa transceiver
   rf = newLoRa();
@@ -134,6 +140,7 @@ int main(void)
   rf.preamble = 8;
 
   if (LoRa_init(&rf) != LORA_OK) {
+    DEBUG_MSG("LoRa init failed\n");
     Error_Handler();
   }
 
@@ -210,9 +217,11 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
+  DEBUG_MSG("ERROR!\n");
+
+  while (1) {
+    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+    HAL_Delay(100);
   }
   /* USER CODE END Error_Handler_Debug */
 }

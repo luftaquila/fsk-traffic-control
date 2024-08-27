@@ -19,11 +19,31 @@ int _write(int file, uint8_t *ptr, int len) {
   return (len);
 }
 
-#ifdef DEBUG
-#define DEBUG_MSG(...) printf(__VA_ARGS__)
-#else
-#define DEBUG_MSG(...)
+#ifdef DEVICE_CONTROLLER
+#define USB_Transmit(buf, len)             \
+  {                                        \
+    uint8_t usb_ret;                       \
+    do {                                   \
+      usb_ret = CDC_Transmit_FS(buf, len); \
+    } while (usb_ret == USBD_BUSY);        \
+  }
 #endif
+
+#ifdef DEBUG
+#ifdef DEVICE_CONTROLLER
+static inline void usb_printf(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vsprintf(usb_buf, fmt, args);
+  USB_Transmit((uint8_t *)usb_buf, strlen(usb_buf));
+}
+#define DEBUG_MSG(fmt, ...) usb_print(fmt, ##__VA_ARGS__)
+#else /* DEVICE_CONTROLLER */
+#define DEBUG_MSG(...) printf(__VA_ARGS__)
+#endif /* DEVICE_CONTROLLER */
+#else /* DEBUG */
+#define DEBUG_MSG(...)
+#endif /* DEBUG */
 
 
 /*******************************************************************************
@@ -163,9 +183,8 @@ static inline int32_t lsntp_calc_offset(lora_lsntp_t *pkt) {
 }
 
 /*******************************************************************************
- * LoRa sensor detection notification
+ * LoRa sensor detection report
  ******************************************************************************/
-
 typedef struct {
   int32_t timestamp;
   lora_header_t header;
@@ -176,8 +195,9 @@ typedef struct {
  ******************************************************************************/
 typedef struct {
   lora_header_t header;
-} lora_ready_t;
+} lora_notify_t;
 
-typedef lora_ready_t lora_ack_t;
+typedef lora_notify_t lora_ack_t;
+typedef lora_notify_t lora_ready_t;
 
 #endif /* COMMON_H */
