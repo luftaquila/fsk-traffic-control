@@ -39,7 +39,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define DEVICE_CONTROLLER
+#define DEVICE_TYPE_CONTROLLER
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -143,6 +143,15 @@ int main(void)
     DEBUG_MSG("LoRa init failed\n");
     Error_Handler();
   }
+
+  /*****************************************************************************
+   * FSK-TC CONTROLLER workflow                                                *
+   *   1. wait for start command from the USB host                             *
+   *   2. register sensor devices                                              *
+   *   3. run LSNTP time sync server until all sensors are READY               *
+   *   4. listen sensor REPORT                                                 *
+   *   5. control traffic light                                                *
+   ****************************************************************************/
 
   // start LSNTP time sync
   LoRa_startReceiving(&rf);

@@ -19,7 +19,7 @@ int _write(int file, uint8_t *ptr, int len) {
   return (len);
 }
 
-#ifdef DEVICE_CONTROLLER
+#ifdef DEVICE_TYPE_CONTROLLER
 #define USB_Transmit(buf, len)             \
   {                                        \
     uint8_t usb_ret;                       \
@@ -30,7 +30,7 @@ int _write(int file, uint8_t *ptr, int len) {
 #endif
 
 #ifdef DEBUG
-#ifdef DEVICE_CONTROLLER
+#ifdef DEVICE_TYPE_CONTROLLER
 static inline void usb_printf(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -38,9 +38,9 @@ static inline void usb_printf(const char *fmt, ...) {
   USB_Transmit((uint8_t *)usb_buf, strlen(usb_buf));
 }
 #define DEBUG_MSG(fmt, ...) usb_print(fmt, ##__VA_ARGS__)
-#else /* DEVICE_CONTROLLER */
+#else /* DEVICE_TYPE_CONTROLLER */
 #define DEBUG_MSG(...) printf(__VA_ARGS__)
-#endif /* DEVICE_CONTROLLER */
+#endif /* DEVICE_TYPE_CONTROLLER */
 #else /* DEBUG */
 #define DEBUG_MSG(...)
 #endif /* DEBUG */
@@ -89,6 +89,7 @@ static inline uint8_t get_device_id(void) {
  * LoRa typedefs and definitions
  ******************************************************************************/
 #define LORA_ID_BROADCAST (0)
+#define LORA_TIMEOUT (500)
 
 typedef enum {
   LORA_STATUS_OK = 0,

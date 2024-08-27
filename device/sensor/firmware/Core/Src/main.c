@@ -39,7 +39,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define DEVICE_SENSOR
+#define DEVICE_TYPE_SENSOR
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -155,13 +155,19 @@ int main(void)
     Error_Handler();
   }
 
-  // start LSNTP time sync
+  /*****************************************************************************
+   * FSK-TC SENSOR workflow                                                    *
+   *   1. LSNTP time sync x5                                                   *
+   *   2. send READY and wait ACK                                              *
+   *   3. send REPORT on sensor detection and wait ACK; repeat                 *
+   ****************************************************************************/
+
+  /*****************************************************************************
+   * 1. do LSNTP 5 times and set offset as average
+   ****************************************************************************/
   LoRa_startReceiving(&rf);
   mode = MODE_LSNTP;
 
-  /*****************************************************************************
-   * do LSNTP
-   ****************************************************************************/
   lora_lsntp_t packet;
   packet.header.size = sizeof(lora_lsntp_t);
   packet.header.protocol = LORA_LSNTP_REQ;
@@ -186,7 +192,7 @@ int main(void)
       packet.header.sequence = seq;
       packet.client_req_tx = HAL_GetTick();
       lora_set_checksum(&packet.header, sizeof(lora_lsntp_t));
-      LoRa_transmit(&rf, (uint8_t *)&packet, sizeof(lora_lsntp_t), 500);
+      LoRa_transmit(&rf, (uint8_t *)&packet, sizeof(lora_lsntp_t), LORA_TIMEOUT);
 
       DEBUG_MSG("LSNTP req #%u\n", seq);
 
@@ -197,7 +203,7 @@ int main(void)
     // busy wait for the reply
     while (!exti_rf) {
       // 500ms timeout
-      if (HAL_GetTick() > packet.client_req_tx + 500) {
+      if (HAL_GetTick() > packet.client_req_tx + LORA_TIMEOUT) {
         retransmit = true;
         break;
       }
@@ -250,11 +256,13 @@ int main(void)
     }
   }
 
+  // TODO: check standard distribution and remove anomaly
   lsntp_offset /= LSNTP_ITER_COUNT;
   DEBUG_MSG("done LSNTP. controller: %u, offset: %ld\n", controller_id, lsntp_offset);
 
+
   /*****************************************************************************
-   * send READY and wait for ACK
+   * 2. send READY and wait for ACK
    ****************************************************************************/
   lora_ready_t ready_packet;
   ready_packet.header.size = sizeof(lora_ready_t);
@@ -273,7 +281,7 @@ int main(void)
 
     ready_packet.header.sequence = seq;
     lora_set_checksum(&ready_packet.header, sizeof(lora_ready_t));
-    LoRa_transmit(&rf, (uint8_t *)&ready_packet, sizeof(lora_ready_t), 500);
+    LoRa_transmit(&rf, (uint8_t *)&ready_packet, sizeof(lora_ready_t), LORA_TIMEOUT);
     transmit_time = HAL_GetTick();
 
     DEBUG_MSG("READY #%u\n", seq);
@@ -284,7 +292,7 @@ int main(void)
     // busy wait for the ACK
     while (!exti_rf) {
       // 500ms timeout
-      if (HAL_GetTick() > transmit_time + 500) {
+      if (HAL_GetTick() > transmit_time + LORA_TIMEOUT) {
         retransmit = true;
         break;
       }
@@ -326,7 +334,8 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   /*****************************************************************************
-   * watch sensor and report on detection
+   * 3. send REPORT on sensor detection and wait ACK
+   *    NOTE: device will not listen next sensor detection until ACK received
    ****************************************************************************/
   mode = MODE_OPERATION;
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
