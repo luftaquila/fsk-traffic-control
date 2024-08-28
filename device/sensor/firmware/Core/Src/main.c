@@ -29,6 +29,8 @@
 #include <stdint.h>
 
 #include "LoRa.h"
+
+#define DEVICE_TYPE_SENSOR
 #include "common.h"
 /* USER CODE END Includes */
 
@@ -39,7 +41,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define DEVICE_TYPE_SENSOR
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,22 +52,23 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-LoRa rf;
-
-uint32_t exti_sensor = false;
-uint32_t exti_sensor_timestamp = 0;
-
-uint32_t exti_rf = false;
-uint32_t exti_rf_timestamp = 0;
-
 uint8_t id = DEVICE_ID_INVALID;
 uint8_t controller_id = DEVICE_ID_INVALID;
-
 uint32_t mode = MODE_STARTUP;
 
 int32_t lsntp_offset = 0;
 
-uint8_t buf[UINT8_MAX];
+/* LoRa object, receive buffer and flag */
+LoRa rf;
+
+uint32_t exti_rf = false;
+uint32_t exti_rf_timestamp = 0;
+
+uint8_t rf_buf[UINT8_MAX];
+
+/* sensor receive flag */
+uint32_t exti_sensor = false;
+uint32_t exti_sensor_timestamp = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,6 +93,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     exti_rf_timestamp = HAL_GetTick();
     DEBUG_MSG("rcv!\n");
   }
+}
+
+int _write(int file, uint8_t *ptr, int len) {
+  HAL_UART_Transmit(&huart1, (uint8_t *)ptr, (uint16_t)len, 30);
+  return (len);
 }
 /* USER CODE END 0 */
 
@@ -216,8 +224,8 @@ int main(void)
     }
 
     // parse received packet
-    lora_lsntp_t *pkt = (lora_lsntp_t *)buf;
-    uint8_t recv_bytes = LoRa_receive(&rf, buf, sizeof(lora_lsntp_t));
+    lora_lsntp_t *pkt = (lora_lsntp_t *)rf_buf;
+    uint8_t recv_bytes = LoRa_receive(&rf, rf_buf, sizeof(lora_lsntp_t));
     exti_rf = false;
 
     // no full packet received
@@ -304,8 +312,8 @@ int main(void)
     }
 
     // parse received packet
-    lora_ack_t *pkt = (lora_ack_t *)buf;
-    uint8_t recv_bytes = LoRa_receive(&rf, buf, sizeof(lora_ack_t));
+    lora_ack_t *pkt = (lora_ack_t *)rf_buf;
+    uint8_t recv_bytes = LoRa_receive(&rf, rf_buf, sizeof(lora_ack_t));
     exti_rf = false;
 
     // no full packet received
@@ -382,8 +390,8 @@ int main(void)
         }
 
         // parse received packet
-        lora_ack_t *pkt = (lora_ack_t *)buf;
-        uint8_t recv_bytes = LoRa_receive(&rf, buf, sizeof(lora_ack_t));
+        lora_ack_t *pkt = (lora_ack_t *)rf_buf;
+        uint8_t recv_bytes = LoRa_receive(&rf, rf_buf, sizeof(lora_ack_t));
         exti_rf = false;
 
         // no full packet received

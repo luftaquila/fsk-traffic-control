@@ -29,6 +29,8 @@
 #include <stdint.h>
 
 #include "LoRa.h"
+
+#define DEVICE_TYPE_CONTROLLER
 #include "common.h"
 /* USER CODE END Includes */
 
@@ -39,7 +41,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define DEVICE_TYPE_CONTROLLER
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,17 +52,43 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+uint8_t id = DEVICE_ID_INVALID;
+uint32_t mode = MODE_STARTUP;
+uint32_t is_operating = false;
+
+/* LoRa object, receive buffer and flag */
 LoRa rf;
 
 uint32_t exti_rf = false;
 uint32_t exti_rf_timestamp = 0;
 
-uint8_t id = DEVICE_ID_INVALID;
+uint8_t rf_buf[UINT8_MAX];
 
-uint32_t mode = MODE_STARTUP;
+/* sensors to use */
+uint32_t cnt_sensor = 0;
+uint32_t cnt_sensor_ready = 0;
+uint8_t sensors[UINT8_MAX];
+uint8_t sensors_ready[UINT8_MAX];
 
-uint8_t buf[UINT8_MAX];
-uint8_t usb_buf[UINT8_MAX];
+/* USB buffer and flag */
+uint32_t usb_rcv_flag = false;
+extern uint8_t UserRxBufferFS[];
+extern uint8_t UserTxBufferFS[];
+
+/* USB CDC command from the host system */
+typedef enum {
+  CMD_SENSOR,
+  CMD_START,
+  CMD_STOP,
+  CMD_COUNT,
+} usb_cmd_type_t;
+
+const char usb_cmd[CMD_COUNT][MAX_LEN_USB_CMD + 1] = {
+  "$SENSOR",
+  "$START",
+  "$STOP",
+};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,6 +106,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     exti_rf_timestamp = HAL_GetTick();
     DEBUG_MSG("rcv!\n");
   }
+}
+
+int _write(int file, uint8_t *ptr, int len) {
+  HAL_UART_Transmit(&huart1, (uint8_t *)ptr, (uint16_t)len, 30);
+  return (len);
 }
 /* USER CODE END 0 */
 
@@ -153,15 +186,120 @@ int main(void)
    *   5. control traffic light                                                *
    ****************************************************************************/
 
-  // start LSNTP time sync
-  LoRa_startReceiving(&rf);
-  mode = MODE_LSNTP;
+  // flash traffic light 3 times
+  for (int i = 0; i < 6; i++) {
+    // on at even, off at odd
+    RED(!(i & 0b01));
+    GREEN(!(i & 0b01));
+    HAL_Delay(200);
+  }
 
+  mode = MODE_USB_READY;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
+    switch (mode) {
+      case MODE_USB_READY: {
+        if (usb_rcv_flag) {
+          /*************************************************************************
+           * protocol $SENSOR: set sensors to use. $READY on all sensor LSNTP done
+           *   request : $SENSOR <%03d sensor count> <...%03d sensor ids>
+           *   response: $READY
+           ************************************************************************/
+          if (USB_Command(CMD_SENSOR)) {
+            uint8_t *cmd = UserRxBufferFS + strlen(usb_cmd[CMD_SENSOR]) + 1;
+
+            // read sensor count
+            *(cmd + 3) = '\0';
+            cnt_sensor = atoi((const char *)cmd);
+            cnt_sensor_ready = 0;
+            cmd += 4;
+
+            // read sensor ids
+            for (int i = 0; i < cnt_sensor; i++) {
+              *(cmd + 3) = '\0';
+              sensors[i] = atoi((const char *)cmd);
+              sensors_ready[i] = false;
+              cmd += 4;
+            }
+
+            // start LSNTP server
+            mode = MODE_LSNTP;
+            LoRa_startReceiving(&rf);
+          }
+
+          // unknown command
+          else {
+            USB_Transmit((uint8_t *)"$ERROR", strlen("$ERROR"));
+          }
+        }
+
+        break;
+      }
+
+      case MODE_LSNTP: {
+        // TODO: start LSNTP server
+
+        if (cnt_sensor_ready == cnt_sensor) {
+          mode = MODE_OPERATION;
+          RED(true);
+          GREEN(false);
+          USB_Transmit((uint8_t *)"$READY", strlen("$READY"));
+        }
+
+        break;
+      }
+
+      case MODE_OPERATION: {
+        if (usb_rcv_flag) {
+          /*************************************************************************
+           * protocol $START: start operation
+           *   request : $START
+           *   response: $OK <start timestamp>
+           ************************************************************************/
+          if (USB_Command(CMD_START)) {
+            RED(false);
+            GREEN(true);
+
+            uint32_t start_time = HAL_GetTick();
+            is_operating = true;
+
+            sprintf((char *)UserTxBufferFS, "$OK %lu", start_time);
+            USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
+          }
+
+          /*************************************************************************
+           * protocol $SENSOR: set sensors to use. $READY on all sensor LSNTP done
+           *   request : $STOP
+           *   response: $OK
+           ************************************************************************/
+          else if (USB_Command(CMD_STOP)) {
+            RED(true);
+            GREEN(false);
+
+            is_operating = false;
+            USB_Transmit((uint8_t *)"$OK", strlen("$OK"));
+          }
+
+          // unknown command
+          else {
+            USB_Transmit((uint8_t *)"$ERROR", strlen("$ERROR"));
+          }
+        }
+
+        if (false) {
+          // TODO: sensor report
+
+        }
+
+        break;
+      }
+      
+      default:
+        break;
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
