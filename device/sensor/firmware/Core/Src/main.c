@@ -176,7 +176,7 @@ int main(void)
   LoRa_startReceiving(&rf);
   mode = MODE_LSNTP;
 
-  lora_lsntp_t packet;
+  lora_lsntp_req_t packet;
   packet.header.protocol = LORA_LSNTP_REQ;
   packet.header.sender = id;
   packet.header.receiver = 0;
@@ -198,8 +198,8 @@ int main(void)
     if (retransmit) {
       packet.header.sequence = seq;
       packet.client_req_tx = HAL_GetTick();
-      lora_set_checksum(&packet.header, sizeof(lora_lsntp_t));
-      LoRa_transmit(&rf, (uint8_t *)&packet, sizeof(lora_lsntp_t), LORA_TIMEOUT);
+      lora_set_checksum(&packet.header, sizeof(lora_lsntp_req_t));
+      LoRa_transmit(&rf, (uint8_t *)&packet, sizeof(lora_lsntp_req_t), LORA_TIMEOUT);
 
       DEBUG_MSG("LSNTP req #%u\n", seq);
 
@@ -223,18 +223,18 @@ int main(void)
     }
 
     // parse received packet
-    lora_lsntp_t *pkt = (lora_lsntp_t *)rf_buf;
-    uint8_t recv_bytes = LoRa_receive(&rf, rf_buf, sizeof(lora_lsntp_t));
+    lora_lsntp_res_t *pkt = (lora_lsntp_res_t *)rf_buf;
+    uint8_t recv_bytes = LoRa_receive(&rf, rf_buf, sizeof(lora_lsntp_res_t));
     exti_rf = false;
 
     // no full packet received
-    if (recv_bytes != sizeof(lora_lsntp_t)) {
+    if (recv_bytes != sizeof(lora_lsntp_res_t)) {
       DEBUG_MSG("  packet length mismatch; received: %u, expected: %u\n", recv_bytes, sizeof(lora_lsntp_t));
       continue;
     }
 
     // checksum or receiver check failure
-    if (lora_verify(id, &pkt->header, sizeof(lora_lsntp_t)) == LORA_STATUS_OK) {
+    if (lora_verify(id, &pkt->header, sizeof(lora_lsntp_res_t)) == LORA_STATUS_OK) {
       DEBUG_MSG("  packet checksum mismatch; received: 0x%08lx\n", pkt->header.checksum);
       continue;
     }
@@ -247,8 +247,7 @@ int main(void)
     }
 
     // calculate offset
-    pkt->client_res_rx = exti_rf_timestamp;
-    offset[success] = lsntp_calc_offset(pkt);
+    offset[success] = lsntp_calc_offset(pkt, exti_rf_timestamp);
     lsntp_offset += offset[success];
     DEBUG_MSG("  offset: %ld\n", offset[success]);
 

@@ -182,20 +182,25 @@ static inline int32_t lora_verify(uint8_t id, lora_header_t *header, uint32_t si
 
 typedef struct {
   lora_header_t header;
-  int32_t client_req_tx; // time request sent by client
-  int32_t server_req_rx; // time request received by server
-  int32_t server_res_tx; // time reply sent by server
-  int32_t client_res_rx; // time reply received by client
-} lora_lsntp_t;
+  uint32_t client_req_tx; // time request sent by client
+} lora_lsntp_req_t;
 
-static inline int32_t lsntp_calc_offset(lora_lsntp_t *pkt) {
+typedef struct {
+  lora_header_t header;
+  uint32_t client_req_tx; // time request sent by client
+  uint32_t server_req_rx; // time request received by server
+  uint32_t server_res_tx; // time reply sent by server
+} lora_lsntp_res_t;
+
+static inline int32_t lsntp_calc_offset(lora_lsntp_res_t *pkt, uint32_t client_res_rx) {
   // round trip time calculation
-  int32_t rtt = (pkt->client_res_rx - pkt->client_req_tx) - (pkt->server_res_tx - pkt->server_req_rx);
-  (void)rtt;
+  #ifdef DEBUG
+  int32_t rtt = ((int32_t)client_res_rx - (int32_t)(pkt->client_req_tx)) - ((int32_t)(pkt->server_res_tx) - (int32_t)(pkt->server_req_rx));
   DEBUG_MSG("RTT: %ld\n", rtt);
+  #endif
 
   // system clock offset calculation
-  int32_t offset = ((pkt->server_req_rx - pkt->client_req_tx) + (pkt->server_res_tx - pkt->client_res_rx)) / 2;
+  int32_t offset = (((int32_t)(pkt->server_req_rx) - (int32_t)(pkt->client_req_tx)) + ((int32_t)(pkt->server_res_tx) - (int32_t)client_res_rx)) / 2;
 
   return offset;
 }

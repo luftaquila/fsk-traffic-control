@@ -262,7 +262,7 @@ int main(void)
 
             switch (req->protocol) {
               case LORA_LSNTP_REQ: {
-                size = sizeof(lora_lsntp_t);
+                size = sizeof(lora_lsntp_req_t);
                 break;
               }
 
@@ -292,15 +292,16 @@ int main(void)
             // send reply
             switch (req->protocol) {
               case LORA_LSNTP_REQ: {
-                lora_lsntp_t reply;
+                lora_lsntp_res_t reply;
                 reply.header.protocol = LORA_LSNTP_RES;
                 reply.header.sequence = req->sequence;
                 reply.header.sender = id;
                 reply.header.receiver = req->sender;
+                reply.client_req_tx = ((lora_lsntp_req_t *)req)->client_req_tx;
                 reply.server_req_rx = exti_rf_timestamp;
                 reply.server_res_tx = HAL_GetTick();
-                lora_set_checksum(&reply.header, sizeof(lora_lsntp_t));
-                LoRa_transmit(&rf, (uint8_t *)&reply, sizeof(lora_lsntp_t), 500);
+                lora_set_checksum(&reply.header, sizeof(lora_lsntp_res_t));
+                LoRa_transmit(&rf, (uint8_t *)&reply, sizeof(lora_lsntp_res_t), 500);
                 break;
               }
 
