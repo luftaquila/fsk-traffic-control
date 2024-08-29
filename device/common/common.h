@@ -100,10 +100,12 @@ static inline uint8_t get_device_id(void) {
  * LoRa typedefs and definitions
  ******************************************************************************/
 #define LORA_ID_BROADCAST (0)
-#define LORA_TIMEOUT (500)
+#define LORA_HEADER_MAGIC (0x55)
+#define LORA_TIMEOUT      (500)
 
 typedef enum {
   LORA_STATUS_OK = 0,
+  LORA_STATUS_ERR_MAGIC,
   LORA_STATUS_ERR_CHECKSUM,
   LORA_STATUS_ERR_NOT_ME,
 } lora_status_t;
@@ -121,7 +123,7 @@ typedef enum {
  ******************************************************************************/
 
 typedef struct {
-  uint8_t size;         // total packet size
+  uint8_t magic;        // packet magic byte
   uint8_t protocol : 4; // lora mesage type
   uint8_t sequence : 4; // packet sequence
   uint8_t sender;       // sender device id
@@ -140,7 +142,7 @@ typedef struct {
  * @param [in] size   lora packet size
  */
 static inline void lora_set_checksum(lora_header_t *header, uint32_t size) {
-  header->size = size;
+  header->magic = LORA_HEADER_MAGIC;
   header->checksum = 0;
   header->checksum = HAL_CRC_Calculate(&hcrc, (uint32_t *)header, size / sizeof(uint32_t));
 }
@@ -153,6 +155,10 @@ static inline void lora_set_checksum(lora_header_t *header, uint32_t size) {
  * @param[in] size   lora packet size
  */
 static inline int32_t lora_verify(uint8_t id, lora_header_t *header, uint32_t size) {
+  if (header->magic != LORA_HEADER_MAGIC) {
+    return LORA_STATUS_ERR_MAGIC;
+  }
+
   uint16_t checksum = header->checksum;
   header->checksum = 0;
 

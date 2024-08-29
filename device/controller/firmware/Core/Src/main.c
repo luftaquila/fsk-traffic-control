@@ -104,7 +104,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   if (GPIO_Pin == DIO0_Pin) {
     exti_rf = true;
     exti_rf_timestamp = HAL_GetTick();
-    DEBUG_MSG("rcv!\n");
+    DEBUG_MSG("\nrcv!\n");
   }
 }
 
@@ -152,7 +152,7 @@ int main(void)
 
   // get device id
   id = get_device_id();
-  DEBUG_MSG("id: %u\n", id);
+  DEBUG_MSG("\nid: %u\n", id);
 
   // init Ra-01H LoRa transceiver
   rf = newLoRa();
@@ -173,7 +173,7 @@ int main(void)
   rf.preamble = 8;
 
   if (LoRa_init(&rf) != LORA_OK) {
-    DEBUG_MSG("LoRa init failed\n");
+    DEBUG_MSG("\nLoRa init failed\n");
     Error_Handler();
   }
 
@@ -364,7 +364,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  DEBUG_MSG("ERROR!\n");
+  DEBUG_MSG("\nERROR!\n");
 
   while (1) {
     HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
