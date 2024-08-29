@@ -317,7 +317,7 @@ int main(void)
                  * protocol $READY: notify sensor ready
                  *   notify: $READY <%03d sensor id> <%d sensor offset>
                  ************************************************************/
-                sprintf((char *)UserTxBufferFS, "$READY %03u %ld", req->sender, ((lora_ready_t *)req)->timestamp);
+                sprintf((char *)UserTxBufferFS, "$READY %03u %ld", req->sender, ((lora_ready_t *)req)->offset);
                 USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
 
                 break;
@@ -384,7 +384,7 @@ int main(void)
              * protocol $REPORT: notify sensor report
              *   notify: $REPORT <%03d sensor id> <%d timestamp>
              ************************************************************/
-            sprintf((char *)UserTxBufferFS, "$REPORT %03u %ld", req->sender, ((lora_sensor_report_t *)req)->timestamp);
+            sprintf((char *)UserTxBufferFS, "$REPORT %03u %lu", req->sender, ((lora_sensor_report_t *)req)->timestamp);
             USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
 
             pos += size;

@@ -275,7 +275,7 @@ int main(void)
   ready_packet.header.protocol = LORA_READY;
   ready_packet.header.sender = id;
   ready_packet.header.receiver = controller_id;
-  ready_packet.timestamp = lsntp_offset;
+  ready_packet.offset = lsntp_offset;
 
   seq = 0;
   retransmit = true;
@@ -351,7 +351,7 @@ int main(void)
   report_packet.header.protocol = LORA_SENSOR_REPORT;
   report_packet.header.sender = id;
   report_packet.header.receiver = controller_id;
-  report_packet.timestamp = (int32_t)exti_sensor_timestamp;
+  report_packet.timestamp = exti_sensor_timestamp;
 
   while (1) {
     if (exti_sensor) {

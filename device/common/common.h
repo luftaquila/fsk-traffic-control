@@ -201,14 +201,20 @@ static inline int32_t lsntp_calc_offset(lora_lsntp_t *pkt) {
 }
 
 /*******************************************************************************
- * LoRa sensor detection REPORT and READY
+ * LoRa sensor detection REPORT
  ******************************************************************************/
 typedef struct {
   lora_header_t header;
-  int32_t timestamp;
+  uint32_t timestamp;
 } lora_sensor_report_t;
 
-typedef lora_sensor_report_t lora_ready_t;
+/*******************************************************************************
+ * LoRa READY - LSNTP finish
+ ******************************************************************************/
+typedef struct {
+  lora_header_t header;
+  int32_t offset;
+} lora_ready_t;
 
 /*******************************************************************************
  * LoRa ACK
