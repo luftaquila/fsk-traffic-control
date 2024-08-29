@@ -63,6 +63,7 @@ uint32_t exti_rf = false;
 uint32_t exti_rf_timestamp = 0;
 
 uint8_t rf_buf[UINT8_MAX];
+uint8_t rf_buf_read = 0;
 
 /* sensors to use */
 uint32_t cnt_sensor = 0;
@@ -104,7 +105,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   if (GPIO_Pin == DIO0_Pin) {
     exti_rf = true;
     exti_rf_timestamp = HAL_GetTick();
-    DEBUG_MSG("\nrcv!\n");
+    rf_buf_read = LoRa_receive(&rf, rf_buf, sizeof(rf_buf));
+    DEBUG_MSG("\nrcv %lu bytes\n", rf_buf_read);
   }
 }
 
@@ -202,11 +204,16 @@ int main(void)
   while (1) {
     switch (mode) {
       case MODE_USB_READY: {
+        // ignore lora
+        if (exti_rf) {
+          exti_rf = false;
+        }
+
         if (usb_rcv_flag) {
           /*************************************************************************
-           * protocol $SENSOR: set sensors to use. $READY on all sensor LSNTP done
+           * protocol $SENSOR: set sensors to use. $READY-ALL on all sensor LSNTP done
            *   request : $SENSOR <%03d sensor count> <...%03d sensor ids>
-           *   response: $READY
+           *   response: $READY-ALL
            ************************************************************************/
           if (USB_Command(CMD_SENSOR)) {
             uint8_t *cmd = UserRxBufferFS + strlen(usb_cmd[CMD_SENSOR]) + 1;
@@ -237,22 +244,155 @@ int main(void)
         }
 
         break;
-      }
+      } /* MODE_USB_READY */
 
       case MODE_LSNTP: {
-        // TODO: start LSNTP server
+        if (exti_rf) {
+          uint8_t *pos = rf_buf;
 
+          while (pos < rf_buf + rf_buf_read) {
+            if (*pos != LORA_HEADER_MAGIC) {
+              pos++;
+              continue;
+            }
+
+            // read packet header
+            uint32_t size = 0;
+            lora_header_t *req = (lora_header_t *)pos;
+
+            switch (req->protocol) {
+              case LORA_LSNTP_REQ: {
+                size = sizeof(lora_lsntp_t);
+                break;
+              }
+
+              case LORA_READY: {
+                size = sizeof(lora_ready_t);
+                break;
+              }
+
+              // unknown protocol
+              default: {
+                pos++;
+                continue;
+              }
+            } /* switch (req->protocol) */
+
+            // no full packet received
+            if (pos + size >= rf_buf + rf_buf_read) {
+              break;
+            }
+
+            // checksum failure
+            if (lora_verify(id, req, size) != LORA_STATUS_OK) {
+              pos++;
+              continue;
+            }
+
+            // send reply
+            switch (req->protocol) {
+              case LORA_LSNTP_REQ: {
+                lora_lsntp_t reply;
+                reply.header.protocol = LORA_LSNTP_RES;
+                reply.header.sequence = req->sequence;
+                reply.header.sender = id;
+                reply.header.receiver = req->sender;
+                reply.server_req_rx = exti_rf_timestamp;
+                reply.server_res_tx = HAL_GetTick();
+                lora_set_checksum(&reply.header, sizeof(lora_lsntp_t));
+                LoRa_transmit(&rf, (uint8_t *)&reply, sizeof(lora_lsntp_t), 500);
+                break;
+              }
+
+              case LORA_READY: {
+                lora_ack_t ack;
+                ack.header.protocol = LORA_ACK;
+                ack.header.sequence = req->sequence;
+                ack.header.sender = id;
+                ack.header.receiver = req->sender;
+                lora_set_checksum(&ack.header, sizeof(lora_ack_t));
+                LoRa_transmit(&rf, (uint8_t *)&ack, sizeof(lora_ack_t), 500);
+
+                /*************************************************************
+                 * protocol $READY: notify sensor ready
+                 *   notify: $READY <%03d sensor id> <%d sensor offset>
+                 ************************************************************/
+                sprintf((char *)UserTxBufferFS, "$READY %03u %ld", req->sender, ((lora_ready_t *)req)->timestamp);
+                USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
+
+                break;
+              }
+            } /* switch (header->protocol)*/
+
+            pos += size;
+          } /* while buffer */
+
+          exti_rf = false;
+        } /* exti_rf */
+
+        // all registered sensors are ready
         if (cnt_sensor_ready == cnt_sensor) {
           mode = MODE_OPERATION;
           RED(true);
           GREEN(false);
-          USB_Transmit((uint8_t *)"$READY", strlen("$READY"));
+          USB_Transmit((uint8_t *)"$READY-ALL", strlen("$READY-ALL"));
         }
 
         break;
-      }
+      } /* MODE_LSNTP */
 
       case MODE_OPERATION: {
+        if (exti_rf) {
+          uint8_t *pos = rf_buf;
+
+          while (pos < rf_buf + rf_buf_read) {
+            if (*pos != LORA_HEADER_MAGIC) {
+              pos++;
+              continue;
+            }
+
+            // read packet header
+            uint32_t size = sizeof(lora_sensor_report_t);
+            lora_header_t *req = (lora_header_t *)pos;
+
+            // unknown protocol
+            if (req->protocol != LORA_SENSOR_REPORT) {
+              pos++;
+              continue;
+            }
+
+            // no full packet received
+            if (pos + size >= rf_buf + rf_buf_read) {
+              break;
+            }
+
+            // checksum failure
+            if (lora_verify(id, req, size) != LORA_STATUS_OK) {
+              pos++;
+              continue;
+            }
+
+            lora_ack_t ack;
+            ack.header.protocol = LORA_ACK;
+            ack.header.sequence = req->sequence;
+            ack.header.sender = id;
+            ack.header.receiver = req->sender;
+            lora_set_checksum(&ack.header, sizeof(lora_ack_t));
+            LoRa_transmit(&rf, (uint8_t *)&ack, sizeof(lora_ack_t), 500);
+
+            /*************************************************************
+             * protocol $REPORT: notify sensor report
+             *   notify: $REPORT <%03d sensor id> <%d timestamp>
+             ************************************************************/
+            sprintf((char *)UserTxBufferFS, "$REPORT %03u %ld", req->sender, ((lora_sensor_report_t *)req)->timestamp);
+            USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
+
+            pos += size;
+          } /* while buffer */
+
+          exti_rf = false;
+        } /* exti_rf */
+
         if (usb_rcv_flag) {
           /*************************************************************************
            * protocol $START: start operation
@@ -271,7 +411,7 @@ int main(void)
           }
 
           /*************************************************************************
-           * protocol $SENSOR: set sensors to use. $READY on all sensor LSNTP done
+           * protocol $STOP: stop operation
            *   request : $STOP
            *   response: $OK
            ************************************************************************/
@@ -289,15 +429,13 @@ int main(void)
           }
         }
 
-        if (false) {
-          // TODO: sensor report
-
-        }
-
         break;
-      }
+      } /* MODE_OPERATION */
       
       default:
+        if (exti_rf) {
+          exti_rf = false;
+        }
         break;
     }
     /* USER CODE END WHILE */

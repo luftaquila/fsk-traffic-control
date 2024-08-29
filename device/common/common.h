@@ -113,8 +113,8 @@ typedef enum {
 typedef enum {
   LORA_LSNTP_REQ,     // LSNTP time request from client
   LORA_LSNTP_RES,     // LSNTP time reply from server
-  LORA_SENSOR_REPORT, // sensor detection detection
   LORA_READY,         // sensor LSNTP complete and ready to go
+  LORA_SENSOR_REPORT, // sensor detection detection
   LORA_ACK,           // ack
 } lora_protocol_t;
 
@@ -201,21 +201,20 @@ static inline int32_t lsntp_calc_offset(lora_lsntp_t *pkt) {
 }
 
 /*******************************************************************************
- * LoRa sensor detection report
+ * LoRa sensor detection REPORT and READY
  ******************************************************************************/
 typedef struct {
-  int32_t timestamp;
   lora_header_t header;
+  int32_t timestamp;
 } lora_sensor_report_t;
 
+typedef lora_sensor_report_t lora_ready_t;
+
 /*******************************************************************************
- * LoRa ready and ACK
+ * LoRa ACK
  ******************************************************************************/
 typedef struct {
   lora_header_t header;
-} lora_notify_t;
-
-typedef lora_notify_t lora_ack_t;
-typedef lora_notify_t lora_ready_t;
+} lora_ack_t;
 
 #endif /* COMMON_H */

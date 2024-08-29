@@ -177,7 +177,6 @@ int main(void)
   mode = MODE_LSNTP;
 
   lora_lsntp_t packet;
-  packet.header.size = sizeof(lora_lsntp_t);
   packet.header.protocol = LORA_LSNTP_REQ;
   packet.header.sender = id;
   packet.header.receiver = 0;
@@ -273,10 +272,10 @@ int main(void)
    * 2. send READY and wait for ACK
    ****************************************************************************/
   lora_ready_t ready_packet;
-  ready_packet.header.size = sizeof(lora_ready_t);
   ready_packet.header.protocol = LORA_READY;
   ready_packet.header.sender = id;
   ready_packet.header.receiver = controller_id;
+  ready_packet.timestamp = lsntp_offset;
 
   seq = 0;
   retransmit = true;
@@ -349,11 +348,10 @@ int main(void)
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
   lora_sensor_report_t report_packet;
-  report_packet.header.size = sizeof(lora_sensor_report_t);
   report_packet.header.protocol = LORA_SENSOR_REPORT;
   report_packet.header.sender = id;
   report_packet.header.receiver = controller_id;
-  report_packet.timestamp = exti_sensor_timestamp;
+  report_packet.timestamp = (int32_t)exti_sensor_timestamp;
 
   while (1) {
     if (exti_sensor) {
