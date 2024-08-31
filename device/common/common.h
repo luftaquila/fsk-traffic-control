@@ -76,6 +76,13 @@ typedef enum {
 #define FLASH_ADDR_DEVICE_ID         (FLASH_ADDR_DEVICE_ID_CANARY + 4)
 #define FLASH_DEVICE_ID_CANARY_VALUE (0xBADACAFE)
 
+/***************************************
+ * device id ranges
+ * 0         : broadcast
+ * 1 ~ 200   : sensors
+ * 201 ~ 254 : controllers
+ * 255       : invalid
+ **************************************/
 #define DEVICE_ID_INVALID (0xFF)
 
 static inline uint8_t get_device_id(void) {
