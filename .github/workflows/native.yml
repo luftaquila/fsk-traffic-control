@@ -15,12 +15,13 @@ jobs:
     - name: make
       run: |
         cd native
+        npm install -g electron-builder
         npm install
-        npm run make
+        electron-builder
     - uses: actions/upload-artifact@v4
       with:
         name: build.fsk-traffic-control-windows-x64
-        path: native/out/fsk-traffic-control-win32-x64
+        path: native/dist/fsk-traffic-control*.exe
 
   build-macos:
     name: Build macOS
@@ -30,15 +31,14 @@ jobs:
     - name: make
       run: |
         cd native
-        # pip install setuptools
         brew install python-setuptools
+        npm install -g electron-builder
         npm install
-        npm run make
-        ls -al out
+        electron-builder
     - uses: actions/upload-artifact@v4
       with:
         name: build.fsk-traffic-control-macos-arm64
-        path: native/out/fsk-traffic-control-darwin-arm64
+        path: native/dist/mac-arm64/fsk-traffic-control*.app
 
   build-linux:
     name: Build Linux
@@ -49,12 +49,13 @@ jobs:
       run: |
         cd native
         pip install setuptools
+        npm install -g electron-builder
         npm install
-        npm run make
+        electron-builder
     - uses: actions/upload-artifact@v4
       with:
         name: build.fsk-traffic-control-linux-x64
-        path: native/out/fsk-traffic-control-linux-x64
+        path: native/dist/fsk-traffic-control*.AppImage
 
   release:
     name: release
@@ -65,13 +66,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
       - run: |
-          zip -r fsk-traffic-control-windows-x64.zip build.fsk-traffic-control-windows-x64
-          zip -r fsk-traffic-control-macos-arm64.zip build.fsk-traffic-control-macos-arm64
-          zip -r fsk-traffic-control-linux-x64.zip build.fsk-traffic-control-linux-x64
+          cd native
+          version=${$(npm pkg get version)//\"/}
+          cd ..
+          mv build.fsk-traffic-control-windows-x64 fsk-traffic-control-windows-x64-$version.exe
+          mv build.fsk-traffic-control-macos-arm64 fsk-traffic-control-macos-arm64-$version.app
+          mv build.fsk-traffic-control-linux-x64 fsk-traffic-control-linux-x64-$version.AppImage
       - uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
-          artifacts: "fsk-traffic-control-windows-x64.zip,fsk-traffic-control-macos-arm64.zip,fsk-traffic-control-linux-x64.zip"
+          artifacts: "fsk-traffic-control-windows-x64-*.zip,fsk-traffic-control-macos-arm64-*.zip,fsk-traffic-control-linux-x64-*.zip"
           commit: ${{ github.sha }}
           tag: ${{ github.ref_name }}
           # body: ${{ steps.changes.outputs.changes }}
