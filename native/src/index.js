@@ -1,5 +1,7 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
+
+const { fork } = require('child_process');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -13,6 +15,8 @@ const createWindow = () => {
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: true,
+      contextIsolation: false,
     },
   });
 
@@ -49,3 +53,27 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
+let serial_process;
+
+function create_serial_process(event) {
+  if (!serial_process) {
+    serial_process = fork('./src/serial.js');
+
+    // pass received serial data to the renderer
+    serial_process.on('message', data => {
+      event.sender.send('serial-data', data);
+    });
+  }
+}
+
+// pass target serial port to the serial handler
+ipcMain.on('serial-target', (event, data) => {
+  create_serial_process(event);
+  serial_process.send({ key: 'serial-target', data: data });
+});
+
+// pass serial transmit request to the serial handler
+ipcMain.on('serial-request', (event, data) => {
+  create_serial_process(event);
+  serial_process.send({ key: 'serial-request', data: data });
+});
