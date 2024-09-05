@@ -37,7 +37,7 @@ jobs:
         ls -al out
     - uses: actions/upload-artifact@v4
       with:
-        name: build.fsk-traffic-control-macos
+        name: build.fsk-traffic-control-macos-arm64
         path: native/out/fsk-traffic-control-darwin-arm64
 
   build-linux:
@@ -66,12 +66,12 @@ jobs:
       - uses: actions/download-artifact@v4
       - run: |
           zip -r fsk-traffic-control-windows-x64.zip build.fsk-traffic-control-windows-x64
-          zip -r fsk-traffic-control-macos.zip build.fsk-traffic-control-macos
+          zip -r fsk-traffic-control-macos-arm64.zip build.fsk-traffic-control-macos-arm64
           zip -r fsk-traffic-control-linux-x64.zip build.fsk-traffic-control-linux-x64
       - uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
-          artifacts: "fsk-traffic-control-windows.zip,fsk-traffic-control-macos.zip,fsk-traffic-control-linux-x64.zip"
+          artifacts: "fsk-traffic-control-windows-x64.zip,fsk-traffic-control-macos-arm64.zip,fsk-traffic-control-linux-x64.zip"
           commit: ${{ github.sha }}
           tag: ${{ github.ref_name }}
           # body: ${{ steps.changes.outputs.changes }}

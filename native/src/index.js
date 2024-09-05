@@ -53,15 +53,32 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
-let serial_process;
+let serial = {
+  process: null,
+  ready: false,
+  open: false,
+};
 
 function create_serial_process(event) {
-  if (!serial_process) {
-    serial_process = fork('./src/serial.js');
+  if (!serial.process) {
+    serial.process = fork('./src/serial.js');
+    serial.process.on('message', data => {
+      switch (data.key) {
+        case 'serial-ready': {
+          serial.ready = true;
+          break;
+        }
 
-    // pass received serial data to the renderer
-    serial_process.on('message', data => {
-      event.sender.send('serial-data', data);
+        case 'serial-open': {
+          serial.open = true;
+          break;
+        }
+
+        case 'serial-data': {
+          event.sender.send('serial-data', data.data);
+          break;
+        }
+      }
     });
   }
 }
@@ -69,11 +86,18 @@ function create_serial_process(event) {
 // pass target serial port to the serial handler
 ipcMain.on('serial-target', (event, data) => {
   create_serial_process(event);
-  serial_process.send({ key: 'serial-target', data: data });
+
+  // wait serial process spawns
+  let timer = setInterval(() => {
+    if (serial.ready) {
+      serial.process.send({ key: 'serial-target', data: data });
+      clearInterval(timer);
+    }
+  }, 100);
 });
 
 // pass serial transmit request to the serial handler
 ipcMain.on('serial-request', (event, data) => {
   create_serial_process(event);
-  serial_process.send({ key: 'serial-request', data: data });
+  serial.process.send({ key: 'serial-request', data: data });
 });

@@ -2,14 +2,18 @@ const { SerialPort } = require('serialport');
 
 let port;
 
+process.send({ key: 'serial-ready' });
+
 process.on('message', data => {
   switch (data.key) {
     // open target serial port
     case 'serial-target': {
+      console.log(`target port: ${data.data}`);
+
       port = new SerialPort({ path: data.data, baudRate: 115200 });
 
       port.on('open', () => {
-        console.log('port open!');
+        process.send({ key: 'serial-open' });
       });
 
       port.on('error', err => {
