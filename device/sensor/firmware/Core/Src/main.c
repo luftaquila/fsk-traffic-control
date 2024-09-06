@@ -91,6 +91,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   else if (GPIO_Pin == DIO0_Pin) {
     exti_rf = true;
     exti_rf_timestamp = HAL_GetTick();
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
     DEBUG_MSG("rcv!\n");
   }
 }
@@ -199,7 +200,9 @@ int main(void)
       packet.header.sequence = seq;
       packet.client_req_tx = HAL_GetTick();
       lora_set_checksum(&packet.header, sizeof(lora_lsntp_req_t));
+      HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
       LoRa_transmit(&rf, (uint8_t *)&packet, sizeof(lora_lsntp_req_t), LORA_TIMEOUT);
+      HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 
       DEBUG_MSG("LSNTP req #%u\n", seq);
 
@@ -226,6 +229,7 @@ int main(void)
     lora_lsntp_res_t *pkt = (lora_lsntp_res_t *)rf_buf;
     uint8_t recv_bytes = LoRa_receive(&rf, rf_buf, sizeof(lora_lsntp_res_t));
     exti_rf = false;
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 
     // no full packet received
     if (recv_bytes != sizeof(lora_lsntp_res_t)) {
@@ -287,7 +291,9 @@ int main(void)
 
     ready_packet.header.sequence = seq;
     lora_set_checksum(&ready_packet.header, sizeof(lora_ready_t));
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
     LoRa_transmit(&rf, (uint8_t *)&ready_packet, sizeof(lora_ready_t), LORA_TIMEOUT);
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
     transmit_time = HAL_GetTick();
 
     DEBUG_MSG("READY #%u\n", seq);
@@ -313,6 +319,7 @@ int main(void)
     lora_ack_t *pkt = (lora_ack_t *)rf_buf;
     uint8_t recv_bytes = LoRa_receive(&rf, rf_buf, sizeof(lora_ack_t));
     exti_rf = false;
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 
     // no full packet received
     if (recv_bytes != sizeof(lora_ack_t)) {
@@ -364,7 +371,9 @@ int main(void)
 
         report_packet.header.sequence = seq;
         lora_set_checksum(&report_packet.header, sizeof(lora_sensor_report_t));
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
         LoRa_transmit(&rf, (uint8_t *)&report_packet, sizeof(lora_sensor_report_t), 500);
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
         transmit_time = HAL_GetTick();
 
         DEBUG_MSG("REPORT #%u\n", seq);
@@ -390,6 +399,7 @@ int main(void)
         lora_ack_t *pkt = (lora_ack_t *)rf_buf;
         uint8_t recv_bytes = LoRa_receive(&rf, rf_buf, sizeof(lora_ack_t));
         exti_rf = false;
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 
         // no full packet received
         if (recv_bytes != sizeof(lora_ack_t)) {

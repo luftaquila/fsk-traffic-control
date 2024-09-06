@@ -106,6 +106,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     exti_rf = true;
     exti_rf_timestamp = HAL_GetTick();
     rf_buf_read = LoRa_receive(&rf, rf_buf, sizeof(rf_buf));
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
     DEBUG_MSG("\nrcv %lu bytes\n", rf_buf_read);
   }
 }
@@ -207,6 +208,7 @@ int main(void)
         // ignore lora
         if (exti_rf) {
           exti_rf = false;
+          HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
         }
 
         if (usb_rcv_flag) {
@@ -241,6 +243,8 @@ int main(void)
           else {
             USB_Transmit((uint8_t *)"$ERROR", strlen("$ERROR"));
           }
+
+          usb_rcv_flag = false;
         }
 
         break;
@@ -301,7 +305,9 @@ int main(void)
                 reply.server_req_rx = exti_rf_timestamp;
                 reply.server_res_tx = HAL_GetTick();
                 lora_set_checksum(&reply.header, sizeof(lora_lsntp_res_t));
+                HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
                 LoRa_transmit(&rf, (uint8_t *)&reply, sizeof(lora_lsntp_res_t), 500);
+                HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
                 break;
               }
 
@@ -312,7 +318,9 @@ int main(void)
                 ack.header.sender = id;
                 ack.header.receiver = req->sender;
                 lora_set_checksum(&ack.header, sizeof(lora_ack_t));
+                HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
                 LoRa_transmit(&rf, (uint8_t *)&ack, sizeof(lora_ack_t), 500);
+                HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 
                 /*************************************************************
                  * protocol $READY: notify sensor ready
@@ -329,6 +337,7 @@ int main(void)
           } /* while buffer */
 
           exti_rf = false;
+          HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
         } /* exti_rf */
 
         // all registered sensors are ready
@@ -379,7 +388,9 @@ int main(void)
             ack.header.sender = id;
             ack.header.receiver = req->sender;
             lora_set_checksum(&ack.header, sizeof(lora_ack_t));
+            HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
             LoRa_transmit(&rf, (uint8_t *)&ack, sizeof(lora_ack_t), 500);
+            HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 
             /*************************************************************
              * protocol $REPORT: notify sensor report
@@ -392,6 +403,7 @@ int main(void)
           } /* while buffer */
 
           exti_rf = false;
+          HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
         } /* exti_rf */
 
         if (usb_rcv_flag) {
@@ -428,6 +440,8 @@ int main(void)
           else {
             USB_Transmit((uint8_t *)"$ERROR", strlen("$ERROR"));
           }
+
+          usb_rcv_flag = false;
         }
 
         break;
@@ -436,6 +450,7 @@ int main(void)
       default:
         if (exti_rf) {
           exti_rf = false;
+          HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
         }
         break;
     }
