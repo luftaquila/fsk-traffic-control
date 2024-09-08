@@ -78,6 +78,7 @@ extern uint8_t UserTxBufferFS[];
 
 /* USB CDC command from the host system */
 typedef enum {
+  CMD_HELLO,
   CMD_SENSOR,
   CMD_START,
   CMD_STOP,
@@ -85,6 +86,7 @@ typedef enum {
 } usb_cmd_type_t;
 
 const char usb_cmd[CMD_COUNT][MAX_LEN_USB_CMD + 1] = {
+  "$HELLO",
   "$SENSOR",
   "$START",
   "$STOP",
@@ -237,6 +239,16 @@ int main(void)
             // start LSNTP server
             mode = MODE_LSNTP;
             LoRa_startReceiving(&rf);
+          }
+
+          /*************************************************************************
+           * protocol $HELLO: greetings!
+           *   request : $HELLO
+           *   response: $HI <%03d my id>
+           ************************************************************************/
+          else if (USB_Command(CMD_HELLO)) {
+            sprintf((char *)UserTxBufferFS, "$HI %03u", id);
+            USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
           }
 
           // unknown command

@@ -8,8 +8,6 @@ process.on('message', data => {
   switch (data.key) {
     // open target serial port
     case 'serial-target': {
-      console.log(`target port: ${data.data}`);
-
       port = new SerialPort({ path: data.data, baudRate: 115200 });
 
       port.on('open', () => {

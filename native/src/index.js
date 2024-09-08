@@ -1,7 +1,7 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
-
+const notifier = require('node-notifier');
 const { fork } = require('child_process');
+const { app, BrowserWindow, ipcMain } = require('electron');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -71,6 +71,7 @@ function create_serial_process(event) {
 
         case 'serial-open': {
           serial.open = true;
+          event.sender.send('serial-open');
           break;
         }
 
@@ -98,6 +99,18 @@ ipcMain.on('serial-target', (event, data) => {
 
 // pass serial transmit request to the serial handler
 ipcMain.on('serial-request', (event, data) => {
-  create_serial_process(event);
   serial.process.send({ key: 'serial-request', data: data });
+});
+
+ipcMain.on('notify', (event, data) => {
+  notifier.notify({
+    title: data.title,
+    message: data.message ? data.message : " ",
+    icon: path.join(__dirname, '../resources/icons/icon.png'),
+    appID: 'FSK traffic control'
+  });
+});
+
+ipcMain.on('quit', event => {
+  app.quit();
 });
