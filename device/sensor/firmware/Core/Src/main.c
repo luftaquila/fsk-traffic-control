@@ -84,7 +84,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   if (GPIO_Pin == SENSOR_Pin) {
     exti_sensor = true;
     exti_sensor_timestamp = HAL_GetTick();
-    DEBUG_MSG("sensor!\n");
+    DEBUG_MSG("sensor %lu\n", exti_sensor_timestamp);
   }
 
   // RF data received
@@ -233,13 +233,15 @@ int main(void)
 
     // no full packet received
     if (recv_bytes != sizeof(lora_lsntp_res_t)) {
-      DEBUG_MSG("  packet length mismatch; received: %u, expected: %u\n", recv_bytes, sizeof(lora_lsntp_t));
+      DEBUG_MSG("  packet length mismatch; received: %u, expected: %u\n", recv_bytes, sizeof(lora_lsntp_res_t));
       continue;
     }
 
     // checksum or receiver check failure
-    if (lora_verify(id, &pkt->header, sizeof(lora_lsntp_res_t)) == LORA_STATUS_OK) {
-      DEBUG_MSG("  packet checksum mismatch; received: 0x%08lx\n", pkt->header.checksum);
+    int32_t ret = lora_verify(id, &pkt->header, sizeof(lora_lsntp_res_t));
+
+    if (ret != LORA_STATUS_OK) {
+      DEBUG_MSG("  packet verify failure; result: %ld\n", ret);
       continue;
     }
 
@@ -328,15 +330,17 @@ int main(void)
     }
 
     // checksum or receiver check failure
-    if (lora_verify(id, &pkt->header, sizeof(lora_ack_t)) == LORA_STATUS_OK) {
-      DEBUG_MSG("  packet checksum mismatch; received: 0x%08lx\n", pkt->header.checksum);
+    int32_t ret = lora_verify(id, &pkt->header, sizeof(lora_ack_t));
+
+    if (ret != LORA_STATUS_OK) {
+      DEBUG_MSG("  packet verify failure; result: %ld\n", ret);
       continue;
     }
 
     // wrong packet
-    if (pkt->header.protocol != LORA_ACK || pkt->header.sequence != packet.header.sequence) {
+    if (pkt->header.protocol != LORA_ACK || pkt->header.sequence != ready_packet.header.sequence) {
       DEBUG_MSG("  packet mismatch; received: %u(%u), expected: %u(%u)\n",
-                pkt->header.protocol, pkt->header.sequence, LORA_ACK, packet.header.sequence);
+                pkt->header.protocol, pkt->header.sequence, LORA_ACK, ready_packet.header.sequence);
       continue;
     }
 
@@ -357,10 +361,11 @@ int main(void)
   report_packet.header.protocol = LORA_SENSOR_REPORT;
   report_packet.header.sender = id;
   report_packet.header.receiver = controller_id;
-  report_packet.timestamp = exti_sensor_timestamp;
 
   while (1) {
     if (exti_sensor) {
+      report_packet.timestamp = exti_sensor_timestamp + lsntp_offset;
+
       seq = 0;
       retransmit = true;
 
@@ -376,7 +381,7 @@ int main(void)
         HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
         transmit_time = HAL_GetTick();
 
-        DEBUG_MSG("REPORT #%u\n", seq);
+        DEBUG_MSG("REPORT #%u %lu\n", seq, report_packet.timestamp);
 
         seq++;
         retransmit = false;
@@ -408,15 +413,17 @@ int main(void)
         }
 
         // checksum or receiver check failure
-        if (lora_verify(id, &pkt->header, sizeof(lora_ack_t)) == LORA_STATUS_OK) {
-          DEBUG_MSG("  packet checksum mismatch; received: 0x%08lx\n", pkt->header.checksum);
+        int32_t ret = lora_verify(id, &pkt->header, sizeof(lora_ack_t));
+
+        if (ret != LORA_STATUS_OK) {
+          DEBUG_MSG("  packet verify failure; result: %ld\n", ret);
           continue;
         }
 
         // wrong packet
-        if (pkt->header.protocol != LORA_ACK || pkt->header.sequence != packet.header.sequence) {
+        if (pkt->header.protocol != LORA_ACK || pkt->header.sequence != report_packet.header.sequence) {
           DEBUG_MSG("  packet mismatch; received: %u(%u), expected: %u(%u)\n",
-                    pkt->header.protocol, pkt->header.sequence, LORA_ACK, packet.header.sequence);
+                    pkt->header.protocol, pkt->header.sequence, LORA_ACK, report_packet.header.sequence);
           continue;
         }
 

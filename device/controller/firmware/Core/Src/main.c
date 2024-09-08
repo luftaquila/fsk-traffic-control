@@ -109,7 +109,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     exti_rf_timestamp = HAL_GetTick();
     rf_buf_read = LoRa_receive(&rf, rf_buf, sizeof(rf_buf));
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-    DEBUG_MSG("\nrcv %lu bytes\n", rf_buf_read);
+    DEBUG_MSG("\nrcv %dB\n", rf_buf_read);
   }
 }
 
@@ -192,12 +192,15 @@ int main(void)
    ****************************************************************************/
 
   // flash traffic light 3 times
+  #ifdef DISABLED
+  // TODO: fix exti on relay switch
   for (int i = 0; i < 6; i++) {
     // on at even, off at odd
     RED(!(i & 0b01));
     GREEN(!(i & 0b01));
     HAL_Delay(200);
   }
+  #endif /* ifdef DISABLED */
 
   mode = MODE_USB_READY;
   /* USER CODE END 2 */
@@ -217,7 +220,7 @@ int main(void)
           /*************************************************************************
            * protocol $SENSOR: set sensors to use. $READY-ALL on all sensor LSNTP done
            *   request : $SENSOR <%03d sensor count> <...%03d sensor ids>
-           *   response: $READY-ALL
+           *   response: $LSNTP on start, $READY-ALL on finish
            ************************************************************************/
           if (USB_Command(CMD_SENSOR)) {
             uint8_t *cmd = UserRxBufferFS + strlen(usb_cmd[CMD_SENSOR]) + 1;
@@ -239,6 +242,7 @@ int main(void)
             // start LSNTP server
             mode = MODE_LSNTP;
             LoRa_startReceiving(&rf);
+            USB_Transmit((uint8_t *)"$LSNTP", strlen("$LSNTP"));
           }
 
           /*************************************************************************
@@ -295,12 +299,15 @@ int main(void)
             } /* switch (req->protocol) */
 
             // no full packet received
-            if (pos + size >= rf_buf + rf_buf_read) {
+            if (pos + size > rf_buf + rf_buf_read) {
               break;
             }
 
             // checksum failure
-            if (lora_verify(id, req, size) != LORA_STATUS_OK) {
+            int32_t ret = lora_verify(id, req, size);
+
+            if (ret != LORA_STATUS_OK) {
+              DEBUG_MSG("  packet verify failure; result: %ld\n", ret);
               pos++;
               continue;
             }
@@ -329,6 +336,7 @@ int main(void)
                 ack.header.sequence = req->sequence;
                 ack.header.sender = id;
                 ack.header.receiver = req->sender;
+                cnt_sensor_ready++;
                 lora_set_checksum(&ack.header, sizeof(lora_ack_t));
                 HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
                 LoRa_transmit(&rf, (uint8_t *)&ack, sizeof(lora_ack_t), 500);
@@ -384,12 +392,15 @@ int main(void)
             }
 
             // no full packet received
-            if (pos + size >= rf_buf + rf_buf_read) {
+            if (pos + size > rf_buf + rf_buf_read) {
               break;
             }
 
             // checksum failure
-            if (lora_verify(id, req, size) != LORA_STATUS_OK) {
+            int32_t ret = lora_verify(id, req, size);
+
+            if (ret != LORA_STATUS_OK) {
+              DEBUG_MSG("  packet verify failure; result: %ld\n", ret);
               pos++;
               continue;
             }

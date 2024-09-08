@@ -152,18 +152,23 @@ static inline void lora_set_checksum(lora_header_t *header, uint32_t size) {
  * @param[in] size   lora packet size
  */
 static inline int32_t lora_verify(uint8_t id, lora_header_t *header, uint32_t size) {
+  DEBUG_MSG("magic: %u\nprotocol: %u\nsequence: %u\nsender: %u\nreceiver: %u\nchecksum: %lu\n\n",
+            header->magic, header->protocol, header->sequence,
+            header->sender, header->receiver, header->checksum);
   if (header->magic != LORA_HEADER_MAGIC) {
     return LORA_STATUS_ERR_MAGIC;
   }
 
-  uint16_t checksum = header->checksum;
+  uint32_t checksum = header->checksum;
   header->checksum = 0;
 
   if (checksum != HAL_CRC_Calculate(&hcrc, (uint32_t *)header, size / sizeof(uint32_t))) {
+    DEBUG_MSG("checksum mismatch - value: %lu, expected: %lu\n",
+              checksum, HAL_CRC_Calculate(&hcrc, (uint32_t *)header, size / sizeof(uint32_t)));
     return LORA_STATUS_ERR_CHECKSUM;
   }
 
-  if (header->receiver != id || header->receiver != LORA_ID_BROADCAST) {
+  if (header->receiver != id && header->receiver != LORA_ID_BROADCAST) {
     return LORA_STATUS_ERR_NOT_ME;
   }
 
