@@ -30,17 +30,7 @@
 #endif
 
 #ifdef DEBUG
-#ifdef DEVICE_TYPE_CONTROLLER
-static inline void usb_printf(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  vsprintf(usb_buf, fmt, args);
-  USB_Transmit((uint8_t *)usb_buf, strlen(usb_buf));
-}
-#define DEBUG_MSG(fmt, ...) usb_print(fmt, ##__VA_ARGS__)
-#else /* DEVICE_TYPE_CONTROLLER */
 #define DEBUG_MSG(...) printf(__VA_ARGS__)
-#endif /* DEVICE_TYPE_CONTROLLER */
 #else /* DEBUG */
 #define DEBUG_MSG(...)
 #endif /* DEBUG */
