@@ -432,7 +432,7 @@ int main(void)
           /*************************************************************************
            * protocol $GREEN: GREEN ON, RED OFF. mark timestamp
            *   request : $GREEN
-           *   response: $OK <start timestamp>
+           *   response: $START <start timestamp>
            ************************************************************************/
           if (USB_Command(CMD_GREEN)) {
             RED(false);
@@ -440,7 +440,7 @@ int main(void)
 
             uint32_t start_time = HAL_GetTick();
 
-            sprintf((char *)UserTxBufferFS, "$OK %lu", start_time);
+            sprintf((char *)UserTxBufferFS, "$START %lu", start_time);
             USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
           }
 
