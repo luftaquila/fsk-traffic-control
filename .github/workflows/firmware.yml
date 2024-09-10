@@ -1,14 +1,15 @@
-name: Build & Release firmware
+name: Build firmware
 
 on:
   push:
     paths:
       - 'device/controller/firmware/**'
       - 'device/sensor/firmware/**'
+  workflow_call:
   workflow_dispatch:
   
 jobs:
-  build:
+  build-firmware:
     name: make firmware
     runs-on: ubuntu-latest
     steps:
@@ -50,23 +51,3 @@ jobs:
         with:
           name: sensor
           path: device/sensor/firmware/build/firmware.*
-
-  release:
-    name: release firmware
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-      - id: changes
-        uses: simbo/changes-between-tags-action@v1
-      - uses: ncipollo/release-action@v1
-        with:
-          allowUpdates: true
-          artifacts: |
-            controller/firmware.*
-            sensor/firmware.*
-          commit: ${{ github.sha }}
-          tag: ${{ github.ref_name }}
-          body: ${{ steps.changes.outputs.changes }}

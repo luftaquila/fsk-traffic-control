@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  build-firmware:
+    uses: ./.github/workflows/firmware.yml
+  build-native:
+    uses: ./.github/workflows/native.yml
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    needs: [build-firmware, build-native]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - id: changes
+        uses: simbo/changes-between-tags-action@v1
+      - run: |
+          zip -j firmware-controller-${{ github.ref_name }}.zip controller/firmware.*
+          zip -j firmware-sensor-${{ github.ref_name }}.zip sensor/firmware.*
+          mv build.fsk-traffic-control-windows-x64/*.exe fsk-traffic-control-windows-x64-${{ github.ref_name }}.exe
+          mv build.fsk-traffic-control-macos-arm64/*.dmg fsk-traffic-control-macos-arm64-${{ github.ref_name }}.dmg
+          mv build.fsk-traffic-control-linux-x64/*.AppImage fsk-traffic-control-linux-x64-${{ github.ref_name }}.AppImage
+      - uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: |
+            firmware-*.zip
+            fsk-traffic-control-windows-x64-*.exe
+            fsk-traffic-control-macos-arm64-*.dmg
+            fsk-traffic-control-linux-x64-*.AppImage
+          commit: ${{ github.sha }}
+          tag: ${{ github.ref_name }}
+          body: |
+            ## Note
+            Use [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) to upload the firmware to the device.  
+
+            In MacOS, run the following command before open the installed `fsk-traffic-control` for the first time. Unless, it will say `"fsk-traffic-control" is damaged and can’t be opened.` because this is not a signed application.
+
+            ```sh
+            xattr -c /Applications/fsk-traffic-control.app
+            ```
+
+            ## Changelogs
+            ${{ steps.changes.outputs.changes }}
