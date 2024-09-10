@@ -54,7 +54,6 @@
 /* USER CODE BEGIN PV */
 uint8_t id = DEVICE_ID_INVALID;
 uint32_t mode = MODE_STARTUP;
-uint32_t is_operating = false;
 
 /* LoRa object, receive buffer and flag */
 LoRa rf;
@@ -80,16 +79,18 @@ extern uint8_t UserTxBufferFS[];
 typedef enum {
   CMD_HELLO,
   CMD_SENSOR,
-  CMD_START,
-  CMD_STOP,
+  CMD_GREEN,
+  CMD_RED,
+  CMD_OFF,
   CMD_COUNT,
 } usb_cmd_type_t;
 
 const char usb_cmd[CMD_COUNT][MAX_LEN_USB_CMD + 1] = {
   "$HELLO",
   "$SENSOR",
-  "$START",
-  "$STOP",
+  "$GREEN",
+  "$RED",
+  "$OFF",
 };
 
 /* USER CODE END PV */
@@ -363,8 +364,6 @@ int main(void)
         // all registered sensors are ready
         if (cnt_sensor_ready == cnt_sensor) {
           mode = MODE_OPERATION;
-          RED(true);
-          GREEN(false);
           USB_Transmit((uint8_t *)"$READY-ALL", strlen("$READY-ALL"));
         }
 
@@ -431,31 +430,41 @@ int main(void)
 
         if (usb_rcv_flag) {
           /*************************************************************************
-           * protocol $START: start operation
-           *   request : $START
+           * protocol $GREEN: GREEN ON, RED OFF. mark timestamp
+           *   request : $GREEN
            *   response: $OK <start timestamp>
            ************************************************************************/
-          if (USB_Command(CMD_START)) {
+          if (USB_Command(CMD_GREEN)) {
             RED(false);
             GREEN(true);
 
             uint32_t start_time = HAL_GetTick();
-            is_operating = true;
 
             sprintf((char *)UserTxBufferFS, "$OK %lu", start_time);
             USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
           }
 
           /*************************************************************************
-           * protocol $STOP: stop operation
+           * protocol $RED: RED ON, GREEN OFF.
            *   request : $STOP
            *   response: $OK
            ************************************************************************/
-          else if (USB_Command(CMD_STOP)) {
+          else if (USB_Command(CMD_RED)) {
             RED(true);
             GREEN(false);
 
-            is_operating = false;
+            USB_Transmit((uint8_t *)"$OK", strlen("$OK"));
+          }
+
+          /*************************************************************************
+           * protocol $OFF: RED OFF, GREEN OFF
+           *   request : $OFF
+           *   response: $OK
+           ************************************************************************/
+          else if (USB_Command(CMD_OFF)) {
+            RED(false);
+            GREEN(false);
+
             USB_Transmit((uint8_t *)"$OK", strlen("$OK"));
           }
 
