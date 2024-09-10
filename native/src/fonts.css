@@ -1,0 +1,41 @@
+@font-face {
+  font-family: 'MonoplexKR';
+  src: url('../resources/fonts/MonoplexKR/MonoplexKR-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'MonoplexKR';
+  src: url('../resources/fonts/MonoplexKR/MonoplexKR-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'MonoplexKR';
+  src: url('../resources/fonts/MonoplexKR/MonoplexKR-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Goorm Sans';
+  src: url('../resources/fonts/goorm sans/goorm-sans-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Goorm Sans';
+  src: url('../resources/fonts/goorm sans/goorm-sans-medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Goorm Sans';
+  src: url('../resources/fonts/goorm sans/goorm-sans-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}

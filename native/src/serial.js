@@ -15,7 +15,11 @@ process.on('message', data => {
       });
 
       port.on('error', err => {
-        console.error(`port failed: ${err.message}`);
+        process.send({ key: 'serial-error', data: `${err.message}` });
+      });
+
+      port.on('close', err => {
+        process.send({ key: 'serial-error', data: `컨트롤러 연결 해제` });
       });
 
       // pass received data to the renderer

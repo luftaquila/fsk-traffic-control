@@ -1,7 +1,165 @@
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
-  margin: auto;
-  max-width: 38rem;
-  padding: 2rem;
+  margin: 0;
+  width: 100%;
+  position: absolute;
+  font-family: "Goorm Sans", "MonoplexKR", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+}
+
+h1 {
+  margin-bottom: 2rem;
+}
+
+i.fw {
+  margin-right: 0.5rem;
+}
+
+div.container {
+  margin-left: 6.5rem;
+}
+
+div.container article {
+  margin-left: 1rem;
+  margin-bottom: 3rem;
+}
+
+div.container article h2 {
+  font-size: 1.3rem;
+  margin-left: 1rem;
+  margin-bottom: 1rem;
+}
+
+div.container article table td {
+  padding: 0.2rem;
+}
+
+div.container article>div {
+  margin-left: 3rem;
+  line-height: 1.5rem;
+}
+
+div.container article>div>div {
+  margin-bottom: 1rem;
+}
+
+.disabled {
+  opacity: 50%;
+  pointer-events: none;
+}
+
+/*******************************************************************************
+* specific DOM configurations
+*******************************************************************************/
+span#controller-id,
+span#controller-id i {
+  font-weight: normal;
+  font-size: 1rem;
+  margin-left: 0.5rem;
+}
+
+table#table-traffic-light {
+  text-align: center;
+}
+
+table#table-traffic-light td {
+  padding: 0.5rem;
+}
+
+select.select-team {
+  width: 15rem;
+  height: 1.5rem;
+}
+
+/*******************************************************************************
+* html default style patch
+*******************************************************************************/
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/*******************************************************************************
+* notyf toast width
+*******************************************************************************/
+.notyf__toast {
+  min-width: 400px;
+  max-width: 600px;
+}
+
+/*******************************************************************************
+* sidebar configurations
+*******************************************************************************/
+.sidebar-navigation {
+  display: inline-block;
+  position: fixed;
+  min-height: 100vh;
+  width: 5rem;
+  background-color: #313443;
+  float: left;
+  z-index: 99999;
+}
+
+.sidebar-navigation ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  color: white;
+}
+
+.sidebar-navigation ul li {
+  padding: 28px 0;
+  cursor: pointer;
+  transition: all ease-out 120ms;
+}
+
+.sidebar-navigation ul li i {
+  display: block;
+  font-size: 24px;
+  transition: all ease 450ms;
+}
+
+.sidebar-navigation ul li .tooltip {
+  display: inline-block;
+  position: absolute;
+  width: max-content;
+  background-color: #313443;
+  padding: 8px 15px;
+  border-radius: 3px;
+  margin-top: -26px;
+  left: 90px;
+  opacity: 0;
+  visibility: hidden;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-navigation ul li .tooltip:before {
+  content: "";
+  display: block;
+  position: absolute;
+  left: -4px;
+  top: 10px;
+  transform: rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background-color: inherit;
+}
+
+.sidebar-navigation ul li:hover {
+  background-color: #22252E;
+}
+
+.sidebar-navigation ul li:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.sidebar-navigation ul li.active {
+  background-color: #22252E;
+}
+
+.sidebar-navigation ul li.active i {
+  color: #98D7EC;
 }

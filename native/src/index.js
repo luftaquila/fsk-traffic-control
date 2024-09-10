@@ -10,8 +10,9 @@ if (require('electron-squirrel-startup')) {
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1800,
+    height: 1000,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,
@@ -24,6 +25,10 @@ const createWindow = () => {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+
+  mainWindow.on('closed', function() {
+    app.quit();
+  });
 };
 
 // This method will be called when Electron has finished
@@ -78,6 +83,11 @@ function create_serial_process(event) {
           event.sender.send('serial-data', data.data);
           break;
         }
+
+        case 'serial-error': {
+          event.sender.send('serial-error', data.data);
+          break;
+        }
       }
     });
   }
@@ -101,6 +111,8 @@ ipcMain.on('serial-request', (event, data) => {
   serial.process.send({ key: 'serial-request', data: data });
 });
 
+ipcMain.on('open-url', (evt, data) => {
+  require("electron").shell.openExternal(data);
 });
 
 ipcMain.on('quit', event => {

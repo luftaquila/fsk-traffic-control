@@ -1,16 +1,152 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>FSK Traffic Control Console</title>
-    <link rel="stylesheet" href="index.css" />
-    <link rel="stylesheet" href="btn.css" />
-  </head>
-  <body>
-    <h1>💖 Hello World!</h1>
-    <p>Welcome to your Electron application.</p>
-    <p id="connect" class="btn green">connect</p>
-  </body>
 
-  <script src='./render.js'></script>
+<head>
+  <meta charset="UTF-8" />
+  <title>FSK Traffic Control Console</title>
+  <link rel="stylesheet" href="index.css" />
+  <link rel="stylesheet" href="fonts.css" />
+  <link rel="stylesheet" href="btn.css" />
+  <link rel="stylesheet" href="../node_modules/@fortawesome/fontawesome-free/css/all.min.css" />
+  <link rel="stylesheet" href="../node_modules/notyf/notyf.min.css" />
+</head>
+
+<body>
+  <nav class="sidebar-navigation">
+    <ul>
+      <li id="record" class="nav-mode active">
+        <i class="fa fw fa-rocket"></i>
+        <span class="tooltip">기록 측정</span>
+      </li>
+      <li id="competitive" class="nav-mode">
+        <i class="fa fw fa-flag-checkered"></i>
+        <span class="tooltip">동시 경주</span>
+      </li>
+      <li id="settings" class="nav-mode">
+        <i class="fa fw fa-sliders"></i>
+        <span class="tooltip">팀 설정</span>
+      </li>
+      <li style="position: absolute; bottom: 0; width: 5rem;"
+        onclick="ipcRenderer.send('open-url', 'https://github.com/luftaquila/fsk-traffic-control');">
+        <i class="fab fw fa-github"></i>
+        <span class="tooltip">luftaquila/fsk-traffic-control</span>
+      </li>
+    </ul>
+  </nav>
+
+  <div id="container-record" class="container">
+    <h1>🏎️ 기록 측정 모드</h1>
+
+    <article>
+      <h2>
+        <i class="fa fw fa-cash-register"></i>컨트롤러 설정
+        <span id="controller-id"></span>
+      </h2>
+      <div>
+        <div id="controller-status-color" style="color: orange">
+          <i class="fa fw fa-circle-info"></i><span id="controller-status">연결 대기</span>
+        </div>
+        <div>
+          <span id="connect" class="btn red"><i class="fab fw fa-usb"></i>컨트롤러 연결</span>
+        </div>
+      </div>
+    </article>
+
+    <article>
+      <h2><i class="fa fw fa-video"></i>센서 설정</h2>
+      <div>
+        <table style="margin-bottom: 1rem;">
+          <tr>
+            <td>
+              <i class="fa fw fa-plane-departure"></i>START
+            </td>
+            <td>:</td>
+            <td><input type="number" id="start-sensor-id" class="sensor-id" style="width: 2rem;"></td>
+            <td id="start-sensor-offset" style="padding-left: 1rem;"></td>
+          </tr>
+          <tr>
+            <td><i class="fa fw fa-plane-arrival"></i>END</td>
+            <td>:</td>
+            <td><input type="number" id="end-sensor-id" class="sensor-id" style="width: 2rem;"></td>
+            <td id="end-sensor-offset" style="padding-left: 1rem;"></td>
+          </tr>
+        </table>
+        <span class="set-sensor active-connect btn blue disabled"><i class="fa fw fa-microchip"></i>센서 설정</span>
+      </div>
+    </article>
+
+    <article>
+      <h2><i class="fa fw fa-car-side"></i>팀 설정</h2>
+      <div>
+        <select class='select-team'>
+          <option selected disabled>팀 선택</option>
+        </select>
+        <table style="margin-top: 0.5rem;">
+          <tr>
+            <td>엔트리</td>
+            <td>:</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>학교</td>
+            <td>:</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>팀</td>
+            <td>:</td>
+            <td></td>
+          </tr>
+        </table>
+      </div>
+    </article>
+
+    <article>
+      <h2><i class="fa fw fa-traffic-light"></i>신호등 제어</h2>
+      <div>
+        <table id="table-traffic-light" style="text-align: center;">
+          <tr>
+            <td>
+              <span class="traffic-green btn green active-ready disabled"><i class="fa fw fa-lightbulb"></i>녹색등</span>
+            </td>
+            <td>
+              <span class="traffic-red btn red active-ready disabled"><i class="fa fw fa-lightbulb"></i>적색등</span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <span class="traffic-off btn grey active-ready disabled"><i class="far fw fa-lightbulb"></i>OFF</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </article>
+
+  </div>
+
+  <div id="container-competitive" class="container" style="display: none;">
+    <h1>🏁 동시 경주 모드</h1>
+    <p>Welcome to your Electron application.</p>
+    <p id="connect" class="btn red">connect</p>
+
+    <span class="set-sensor btn green">Set</span>
+
+    <span class="traffic-green btn green">Green</span>
+    <span class="traffic-red btn red">Red</span>
+    <span class="traffic-off btn blue">Off</span>
+  </div>
+
+  <div id="container-settings" class="container" style="display: none;">
+    <h1>⚙️ 설정</h1>
+    <p>Welcome to your Electron application.</p>
+    <span class="set-sensor btn green">Set</span>
+
+    <span class="traffic-green btn green">Green</span>
+    <span class="traffic-red btn red">Red</span>
+    <span class="traffic-off btn blue">Off</span>
+  </div>
+</body>
+
+<script src='./render.js'></script>
+
 </html>
