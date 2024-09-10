@@ -1,5 +1,4 @@
 const path = require('node:path');
-const notifier = require('node-notifier');
 const { fork } = require('child_process');
 const { app, BrowserWindow, ipcMain } = require('electron');
 
@@ -102,13 +101,6 @@ ipcMain.on('serial-request', (event, data) => {
   serial.process.send({ key: 'serial-request', data: data });
 });
 
-ipcMain.on('notify', (event, data) => {
-  notifier.notify({
-    title: data.title,
-    message: data.message ? data.message : " ",
-    icon: path.join(__dirname, '../resources/icons/icon.png'),
-    appID: 'FSK traffic control'
-  });
 });
 
 ipcMain.on('quit', event => {

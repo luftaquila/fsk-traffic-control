@@ -1,5 +1,8 @@
 const { ipcRenderer } = require('electron');
 const { SerialPort } = require('serialport');
+const { Notyf } = require('notyf');
+
+let notyf = new Notyf({ ripple: false });
 
 // UI mode; settings, competitive, record
 let mode = "settings";
@@ -48,7 +51,7 @@ ipcRenderer.on('serial-data', (evt, data) => {
     controller.connected = true;
     document.getElementById('connect').classList.remove('red');
     document.getElementById('connect').classList.add('green');
-    ipcRenderer.send('notify', { title: `${str.substr(4, 3)}번 컨트롤러 연결 완료 (${controller.device.path})` });
+    notyf.success(`${str.substr(4, 3)}번 컨트롤러 연결 완료 (${controller.device.path})`);
   }
 
   // $SENSOR
@@ -106,10 +109,7 @@ function handle_events() {
       }
     }
 
-    ipcRenderer.send('notify', {
-      title: `컨트롤러 연결 실패 (장치 없음)`,
-      message: "먼저 장치를 컴퓨터에 연결한 후에 프로그램을 다시 실행하세요."
-    });
+    notyf.error(`컨트롤러 연결 실패 (장치 없음)`);
   });
 
   document.getElementById("set-sensors").addEventListener("click", () => {
@@ -127,7 +127,7 @@ function handle_events() {
         active_sensors.competitive = [];
 
         if (!cnt_sensor) {
-          return ipcRenderer.send('notify', { title: '경기 레인 수를 입력하세요.' });
+            return notyf.error('경기 레인 수를 입력하세요.');
         }
 
         cnt_sensor = Number(document.getElementById('cnt-lane').value);
@@ -137,7 +137,7 @@ function handle_events() {
           let sensor = document.getElementById(`id-sensor-${i + 1}`).value;
 
           if (!sensor) {
-            return ipcRenderer.send('notify', { title: `${i + 1}번 레인 센서 ID를 입력하세요.` });
+              return notyf.error(`${i + 1}번 레인 센서 ID를 입력하세요.`);
           } else {
             active_sensors.competitive.push({ id: Number(sensor) });
             cmd += `${String(Number(sensor)).padStart(3, 0)} `;
@@ -155,7 +155,7 @@ function handle_events() {
         let end = document.getElementById(`id-sensor-end`).value;
 
         if (!start || !end) {
-          return ipcRenderer.send('notify', { title: `${(!start ? '시작' : '끝')} 지점 센서 ID를 입력하세요.` });
+            return notyf.error(`${(!start ? '시작' : '끝')} 지점 센서 ID를 입력하세요.`);
         }
 
         active_sensors.record.start = { id: Number(start) };
