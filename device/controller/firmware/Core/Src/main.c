@@ -193,15 +193,12 @@ int main(void)
    ****************************************************************************/
 
   // flash traffic light 3 times
-  #ifdef DISABLED
-  // TODO: fix exti on relay switch
   for (int i = 0; i < 6; i++) {
     // on at even, off at odd
     RED(!(i & 0b01));
     GREEN(!(i & 0b01));
     HAL_Delay(200);
   }
-  #endif /* ifdef DISABLED */
 
   mode = MODE_USB_READY;
   /* USER CODE END 2 */

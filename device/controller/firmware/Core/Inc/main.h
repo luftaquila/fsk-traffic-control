@@ -66,10 +66,10 @@ void Error_Handler(void);
 #define DIO0_Pin GPIO_PIN_10
 #define DIO0_GPIO_Port GPIOA
 #define DIO0_EXTI_IRQn EXTI15_10_IRQn
-#define RED_Pin GPIO_PIN_8
-#define RED_GPIO_Port GPIOB
-#define GREEN_Pin GPIO_PIN_9
+#define GREEN_Pin GPIO_PIN_8
 #define GREEN_GPIO_Port GPIOB
+#define RED_Pin GPIO_PIN_9
+#define RED_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
