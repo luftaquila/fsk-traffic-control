@@ -1,6 +1,8 @@
+const fs = require('fs');
 const path = require('node:path');
 const { fork } = require('child_process');
 const { app, BrowserWindow, ipcMain } = require('electron');
+const { rejects } = require('assert');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -60,7 +62,6 @@ app.on('window-all-closed', () => {
 let serial = {
   process: null,
   ready: false,
-  open: false,
 };
 
 function create_serial_process(event) {
@@ -74,7 +75,6 @@ function create_serial_process(event) {
         }
 
         case 'serial-open': {
-          serial.open = true;
           event.sender.send('serial-open');
           break;
         }
@@ -111,7 +111,31 @@ ipcMain.on('serial-request', (event, data) => {
   serial.process.send({ key: 'serial-request', data: data });
 });
 
-ipcMain.on('open-url', (evt, data) => {
+ipcMain.handle('read-entry', async (event, data) => {
+  return await (async () => {
+    return new Promise((resolve, reject) => {
+      try {
+        resolve(JSON.parse(fs.readFileSync("./entry.json")));
+      } catch (e) {
+        reject(e);
+      }
+    });
+  })();
+});
+
+ipcMain.handle('write-entry', async (event, data) => {
+  return await (async () => {
+    return new Promise((resolve, reject) => {
+      try {
+        resolve(fs.writeFileSync('./entry.json', JSON.stringify(data, null, 2), 'utf-8'));
+      } catch (e) {
+        reject(e);
+      }
+    });
+  })();
+});
+
+ipcMain.on('open-url', (event, data) => {
   require("electron").shell.openExternal(data);
 });
 
