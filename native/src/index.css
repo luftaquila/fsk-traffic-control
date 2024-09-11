@@ -32,23 +32,29 @@ div.container div.monitor {
 }
 
 div.container div.configuration {
-  width: 400px;
+  width: 450px;
 }
 
 div.container div.monitor {
   flex-grow: 1;
   text-align: center;
-  padding-top: 4rem;
+  padding-top: 3rem;
 }
 
 div.configuration div.mode-description {
-  margin-bottom: 2rem;
+  height: 3rem;
   line-height: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 div.container article {
   margin-left: 1rem;
   margin-bottom: 3rem;
+}
+
+div.container div.monitor article {
+  margin-left: 0;
+  margin-top: 2rem;
 }
 
 div.container article h2 {
@@ -85,27 +91,57 @@ span#controller-id i {
   margin-left: 0.5rem;
 }
 
-table#table-traffic-light {
+.traffic {
+  display: inline-block;
+  width: 60px;
+  height: 60px;
+  background-color: grey;
+  border-radius: 50%;
+  margin-right: 1.5rem;
+}
+
+table.table-traffic-light {
+  margin-left: -0.5rem;
   text-align: center;
 }
 
-table#table-traffic-light td {
-  padding: 0.5rem;
+table.table-traffic-light td {
+  padding: 0 0.5rem !important;
 }
 
 select.select-team {
-  width: 15rem;
+  width: 18rem;
   height: 1.5rem;
 }
 
 input.event-name {
-  width: 10rem;
+  width: 15rem;
   height: 1.5rem;
   line-height: 1.5rem;
 }
 
 input.sensor-id {
   width: 3rem;
+  text-align: center;
+}
+
+#record-title,
+#competitive-title,
+#lap-title {
+  font-size: 3.5rem;
+  font-weight: bold;
+}
+
+.time {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clock {
+  margin: 0.3rem 0 0!important;
+  font-size: 3rem;
+  font-weight: bold;
 }
 
 /*******************************************************************************
@@ -129,13 +165,13 @@ input::-webkit-inner-spin-button {
 * sidebar configurations
 *******************************************************************************/
 .sidebar-navigation {
-  height: 100vh;
-  width: 5rem;
+  min-width: 80px;
+  min-height: 100vh;
   background-color: #313443;
-  z-index: 99999;
 }
 
 .sidebar-navigation ul {
+  position: fixed;
   list-style-type: none;
   margin: 0;
   padding: 0;
@@ -144,6 +180,7 @@ input::-webkit-inner-spin-button {
 }
 
 .sidebar-navigation ul li {
+  width: 80px;
   padding: 28px 0;
   cursor: pointer;
   transition: all ease-out 120ms;

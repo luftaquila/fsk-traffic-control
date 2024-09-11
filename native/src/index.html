@@ -30,7 +30,7 @@
         <i class="fa fw fa-sliders"></i>
         <span class="tooltip">엔트리 관리</span>
       </li>
-      <li style="position: fixed; bottom: 0; width: 5rem;"
+      <li style="position: fixed; bottom: 0;"
         onclick="ipcRenderer.send('open-url', 'https://github.com/luftaquila/fsk-traffic-control');">
         <i class="fab fw fa-github"></i>
         <span class="tooltip">luftaquila/fsk-traffic-control</span>
@@ -47,8 +47,27 @@
       </div>
 
       <article>
+        <h2><i class="fa fw fa-traffic-light"></i>신호등</h2>
+        <div>
+          <table class="table-traffic-light">
+            <tr>
+              <td>
+                <span class="traffic-green btn green active-ready disabled"><i class="fa fw fa-lightbulb"></i>녹색등</span>
+              </td>
+              <td>
+                <span class="traffic-off btn grey active-ready disabled"><i class="far fw fa-lightbulb"></i>OFF</span>
+              </td>
+              <td>
+                <span class="traffic-red btn red active-ready disabled"><i class="fa fw fa-lightbulb"></i>적색등</span>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </article>
+
+      <article>
         <h2>
-          <i class="fa fw fa-cash-register"></i>컨트롤러 설정
+          <i class="fa fw fa-cash-register"></i>컨트롤러
           <span class="controller-id"></span>
         </h2>
         <div>
@@ -62,25 +81,25 @@
       </article>
 
       <article>
-        <h2><i class="fa fw fa-video"></i>센서 설정</h2>
+        <h2><i class="fa fw fa-microchip"></i>센서</h2>
         <div>
           <table style="margin-bottom: 1rem;">
             <tr>
               <td>
-                <i class="fa fw fa-plane-departure"></i>START
+                <i class="fa fw fa-play"></i>START
               </td>
               <td>:</td>
               <td><input type="number" id="start-sensor-id" class="sensor-id" placeholder="센서 ID"></td>
               <td id="start-sensor-offset" style="padding-left: 1rem;"></td>
             </tr>
             <tr>
-              <td><i class="fa fw fa-plane-arrival"></i>END</td>
+              <td><i class="fa fw fa-stop"></i>END</td>
               <td>:</td>
               <td><input type="number" id="end-sensor-id" class="sensor-id" placeholder="센서 ID"></td>
               <td id="end-sensor-offset" style="padding-left: 1rem;"></td>
             </tr>
           </table>
-          <span class="set-sensor active-connect btn blue disabled"><i class="fa fw fa-microchip"></i>센서 설정</span>
+          <span class="set-sensor active-connect btn blue disabled"><i class="fa fw fa-download"></i>설정 입력</span>
         </div>
       </article>
 
@@ -88,7 +107,7 @@
         <h2><i class="fa fw fa-calendar-check"></i>경기 설정</h2>
         <div>
           <div>
-            이벤트 이름: <input class='event-name'>
+            <input class='event-name' placeholder="이벤트 이름">
           </div>
           <div>
             <select class='select-team'>
@@ -97,32 +116,21 @@
           </div>
         </div>
       </article>
-
-      <!-- <article> -->
-      <!--   <h2><i class="fa fw fa-traffic-light"></i>신호등 제어</h2> -->
-      <!--   <div> -->
-      <!--     <table id="table-traffic-light" style="text-align: center;"> -->
-      <!--       <tr> -->
-      <!--         <td> -->
-      <!--           <span class="traffic-green btn green active-ready disabled"><i class="fa fw fa-lightbulb"></i>녹색등</span> -->
-      <!--         </td> -->
-      <!--         <td> -->
-      <!--           <span class="traffic-red btn red active-ready disabled"><i class="fa fw fa-lightbulb"></i>적색등</span> -->
-      <!--         </td> -->
-      <!--       </tr> -->
-      <!--       <tr> -->
-      <!--         <td colspan="2"> -->
-      <!--           <span class="traffic-off btn grey active-ready disabled"><i class="far fw fa-lightbulb"></i>OFF</span> -->
-      <!--         </td> -->
-      <!--       </tr> -->
-      <!--     </table> -->
-      <!--   </div> -->
-      <!-- </article> -->
-
     </div>
 
     <div class="monitor">
-      <h1 id="record-title"><script>document.write(new Date().getFullYear())</script> FSK</h1>
+      <h1 id="record-title">
+        <script>document.write(new Date().getFullYear())</script> FSK
+      </h1>
+
+      <article class="time">
+          <span class="traffic"></span>
+          <div class="clock">00:00:00.000</div>
+      </article>
+
+      <article>
+
+      </article>
     </div>
   </div>
 
@@ -135,8 +143,27 @@
       </div>
 
       <article>
+        <h2><i class="fa fw fa-traffic-light"></i>신호등</h2>
+        <div>
+          <table class="table-traffic-light">
+            <tr>
+              <td>
+                <span class="traffic-green btn green active-ready disabled"><i class="fa fw fa-lightbulb"></i>녹색등</span>
+              </td>
+              <td>
+                <span class="traffic-off btn grey active-ready disabled"><i class="far fw fa-lightbulb"></i>OFF</span>
+              </td>
+              <td>
+                <span class="traffic-red btn red active-ready disabled"><i class="fa fw fa-lightbulb"></i>적색등</span>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </article>
+
+      <article>
         <h2>
-          <i class="fa fw fa-cash-register"></i>컨트롤러 설정
+          <i class="fa fw fa-cash-register"></i>컨트롤러
           <span class="controller-id"></span>
         </h2>
         <div>
@@ -150,9 +177,9 @@
       </article>
 
       <article>
-        <h2><i class="fa fw fa-video"></i>센서 설정</h2>
+        <h2><i class="fa fw fa-microchip"></i>센서</h2>
         <div>
-          레인 개수: <input type="number" id="cnt-lane" value="2">
+          레인 개수: <input type="number" id="cnt-lane" value="2" style="width: 2rem; text-align: center;">
           <table id="competitive-sensor-table" style="margin: 1rem 0;">
             <tr>
               <td>
@@ -169,7 +196,7 @@
               <td id="sensor-offset-lane-2" style="padding-left: 1rem;"></td>
             </tr>
           </table>
-          <span class="set-sensor active-connect btn blue disabled"><i class="fa fw fa-microchip"></i>센서 설정</span>
+          <span class="set-sensor active-connect btn blue disabled"><i class="fa fw fa-download"></i>설정 입력</span>
         </div>
       </article>
 
@@ -177,7 +204,7 @@
         <h2><i class="fa fw fa-calendar-check"></i>경기 설정</h2>
         <div>
           <div>
-            이벤트 이름: <input class='event-name'>
+            <input class='event-name' placeholder="이벤트 이름">
           </div>
           <div>
             <table id="competitive-team-table">
@@ -208,7 +235,14 @@
     </div>
 
     <div class="monitor">
-      <h1 id="competitive-title"><script>document.write(new Date().getFullYear())</script> FSK</h1>
+      <h1 id="competitive-title">
+        <script>document.write(new Date().getFullYear())</script> FSK
+      </h1>
+
+      <article class="time">
+          <span class="traffic"></span>
+          <div class="clock">00:00:00.000</div>
+      </article>
     </div>
   </div>
 
@@ -221,11 +255,75 @@
       </div>
 
       <article>
+        <h2><i class="fa fw fa-traffic-light"></i>신호등</h2>
+        <div>
+          <table class="table-traffic-light">
+            <tr>
+              <td>
+                <span class="traffic-green btn green active-ready disabled"><i class="fa fw fa-lightbulb"></i>녹색등</span>
+              </td>
+              <td>
+                <span class="traffic-off btn grey active-ready disabled"><i class="far fw fa-lightbulb"></i>OFF</span>
+              </td>
+              <td>
+                <span class="traffic-red btn red active-ready disabled"><i class="fa fw fa-lightbulb"></i>적색등</span>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </article>
+
+      <article>
+        <h2>
+          <i class="fa fw fa-cash-register"></i>컨트롤러
+          <span class="controller-id"></span>
+        </h2>
+        <div>
+          <div class="controller-status-color" style="color: orange">
+            <i class="fa fw fa-circle-info"></i><span class="controller-status">연결 대기</span>
+          </div>
+          <div>
+            <span class="connect btn red"><i class="fab fw fa-usb"></i>컨트롤러 연결</span>
+          </div>
+        </div>
+      </article>
+
+      <article>
+        <h2><i class="fa fw fa-microchip"></i>센서</h2>
+        <div>
+          <table style="margin-bottom: 1rem;">
+            <tr>
+              <td>
+                <i class="fa fw fa-video"></i>센서
+              </td>
+              <td>:</td>
+              <td><input type="number" id="lap-sensor-id" class="sensor-id" placeholder="센서 ID"></td>
+              <td id="start-sensor-offset" style="padding-left: 1rem;"></td>
+            </tr>
+          </table>
+          <span class="set-sensor active-connect btn blue disabled"><i class="fa fw fa-download"></i>설정 입력</span>
+        </div>
+      </article>
+
+      <article>
+        <h2><i class="fa fw fa-calendar-check"></i>경기 설정</h2>
+        <div>
+          <div>
+            <input class='event-name' placeholder="이벤트 이름">
+          </div>
+        </div>
       </article>
     </div>
 
     <div class="monitor">
-      <h1 id="lap-title"><script>document.write(new Date().getFullYear())</script> FSK</h1>
+      <h1 id="lap-title">
+        <script>document.write(new Date().getFullYear())</script> FSK
+      </h1>
+
+      <article class="time">
+          <span class="traffic"></span>
+          <div class="clock">00:00:00.000</div>
+      </article>
     </div>
   </div>
 
@@ -233,7 +331,6 @@
   <div id="container-settings" class="container" style="display: none;">
     <div class="configuration" style="width: 100%;">
       <h1>⚙️ 엔트리 관리</h1>
-
     </div>
   </div>
 </body>
