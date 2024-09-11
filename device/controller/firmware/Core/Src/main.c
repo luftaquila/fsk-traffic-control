@@ -446,26 +446,26 @@ int main(void)
 
           /*************************************************************************
            * protocol $RED: RED ON, GREEN OFF.
-           *   request : $STOP
-           *   response: $OK
+           *   request : $RED
+           *   response: $OK-RED
            ************************************************************************/
           else if (USB_Command(CMD_RED)) {
             RED(true);
             GREEN(false);
 
-            USB_Transmit((uint8_t *)"$OK", strlen("$OK"));
+            USB_Transmit((uint8_t *)"$OK-RED", strlen("$OK-RED"));
           }
 
           /*************************************************************************
            * protocol $OFF: RED OFF, GREEN OFF
            *   request : $OFF
-           *   response: $OK
+           *   response: $OK-OFF
            ************************************************************************/
           else if (USB_Command(CMD_OFF)) {
             RED(false);
             GREEN(false);
 
-            USB_Transmit((uint8_t *)"$OK", strlen("$OK"));
+            USB_Transmit((uint8_t *)"$OK-OFF", strlen("$OK-OFF"));
           }
 
           // unknown command
