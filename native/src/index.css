@@ -97,6 +97,16 @@ select.select-team {
   height: 1.5rem;
 }
 
+input.event-name {
+  width: 10rem;
+  height: 1.5rem;
+  line-height: 1.5rem;
+}
+
+input.sensor-id {
+  width: 3rem;
+}
+
 /*******************************************************************************
 * html default style patch
 *******************************************************************************/
@@ -118,7 +128,7 @@ input::-webkit-inner-spin-button {
 * sidebar configurations
 *******************************************************************************/
 .sidebar-navigation {
-  min-height: 100vh;
+  height: 100vh;
   width: 5rem;
   background-color: #313443;
   z-index: 99999;

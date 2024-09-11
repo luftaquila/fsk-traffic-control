@@ -8,7 +8,9 @@ let timer = {
   connect: undefined,
 };
 
-// UI mode; record, competitive, settings
+const events = ["가속", "스키드패드", "짐카나", "내구"];
+
+// UI mode; record, competitive, lap, settings
 let mode = "record";
 
 let controller = {
@@ -30,7 +32,7 @@ let active_sensors = {
 };
 
 /*******************************************************************************
- * serial port opened
+ * serial port open handler                                                    *
  ******************************************************************************/
 ipcRenderer.on('serial-open', (evt, data) => {
   /*************************************************************************
@@ -38,11 +40,11 @@ ipcRenderer.on('serial-open', (evt, data) => {
    *   request : $HELLO
    *   response: $HI <%03d controller id>
    ************************************************************************/
-  ipcRenderer.send('serial-request', '$HELLO'); // communication check
+  ipcRenderer.send('serial-request', '$HELLO');
 });
 
 /*******************************************************************************
- * serial data received
+ * serial data handler                                                         *
  ******************************************************************************/
 ipcRenderer.on('serial-data', (evt, data) => {
   let str = String.fromCharCode(...data.data);
@@ -53,16 +55,20 @@ ipcRenderer.on('serial-data', (evt, data) => {
     return;
   }
 
-  // $HELLO
+  /*************************************************************************
+   * protocol $HELLO: greetings!
+   *   request : $HELLO
+   *   response: $HI <%03d my id>
+   ************************************************************************/
   if (str.includes("$HI")) {
     controller.id = Number(str.substr(4, 3));
     controller.connected = true;
-    document.getElementById('connect').classList.remove('red');
-    document.getElementById('connect').classList.add('green');
-    document.getElementById('controller-id').innerHTML = `<i class="fa fw fa-hashtag"></i>${controller.id}`;
+    document.querySelector(`div#container-${mode} .connect`).classList.remove('red');
+    document.querySelector(`div#container-${mode} .connect`).classList.add('green');
+    document.querySelector(`div#container-${mode} .controller-id`).innerHTML = `<i class="fa fw fa-hashtag"></i>${controller.id}`;
+    document.querySelector(`div#container-${mode} .controller-status`).innerText = '연결됨';
+    document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
     document.querySelectorAll('.active-connect').forEach(el => el.classList.remove('disabled'));
-    document.getElementById('controller-status').innerText = '연결됨';
-    document.getElementById('controller-status-color').style.color = 'green';
     notyf.success(`${controller.id}번 컨트롤러 연결 완료 (${controller.device.path})`);
 
     if (timer.connect) {
@@ -70,21 +76,35 @@ ipcRenderer.on('serial-data', (evt, data) => {
     }
   }
 
-  // $SENSOR
+  /*************************************************************************
+   * protocol $SENSOR: set sensors to use. $READY-ALL on all sensor LSNTP done
+   *   request : $SENSOR <%03d sensor count> <...%03d sensor ids>
+   *   response: $LSNTP on start, $READY-ALL on finish
+   ************************************************************************/
   else if (str.includes("$LSNTP")) {
-    document.getElementById('controller-status').innerText = '센서 시간 동기화 중...';
-    document.getElementById('controller-status-color').style.color = 'cornflowerblue';
+    document.querySelector(`div#container-${mode} .controller-status`).innerText = '센서 시간 동기화 중...';
+    document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'cornflowerblue';
     notyf.success('센서 시간 동기화 중...');
   }
 
-  // $SENSOR
+  else if (str.includes("$READY-ALL")) {
+    controller.time_synced = true;
+    document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 대기';
+    document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
+    document.querySelectorAll('.active-ready').forEach(el => el.classList.remove('disabled'));
+    notyf.success('센서 시간 동기화 완료 / 계측 대기');
+  }
+
+  /*************************************************************
+   * protocol $READY: notify sensor ready
+   *   notify: $READY <%03d sensor id> <%d sensor offset>
+   ************************************************************/
   else if (str.includes("$READY ")) {
     const id = Number(str.substr(7, 3));
     const offset = Number(str.substr(10));
 
-    document.querySelectorAll('input.sensor-id').forEach(el => {
+    document.querySelectorAll(`div#container-${mode} input.sensor-id`).forEach(el => {
       if (id === Number(el.value)) {
-        console.log(el.parentElement.nextElementSibling);
         el.parentElement.nextElementSibling.innerText = `(${offset} ms)`;
       }
     });
@@ -92,28 +112,44 @@ ipcRenderer.on('serial-data', (evt, data) => {
     notyf.success(`${id}번 센서 시간 오프셋: ${offset} ms`);
   }
 
-  // $SENSOR
-  else if (str.includes("$READY-ALL")) {
-    controller.time_synced = true;
-    document.getElementById('controller-status').innerText = '계측 대기';
-    document.getElementById('controller-status-color').style.color = 'green';
-    document.querySelectorAll('.active-ready').forEach(el => el.classList.remove('disabled'));
-    notyf.success('센서 시간 동기화 완료 / 계측 대기');
+  /*************************************************************
+   * protocol $REPORT: notify sensor report
+   *   notify: $REPORT <%03d sensor id> <%d timestamp>
+   ************************************************************/
+  else if (str.includes("$REPORT")) {
+    // TODO
   }
 
-  // $GREEN
+  /*************************************************************************
+   * protocol $GREEN: GREEN ON, RED OFF. mark timestamp
+   *   request : $GREEN
+   *   response: $START <start timestamp>
+   ************************************************************************/
   else if (str.includes("$START")) {
     controller.start = new Date();
     controller.light = "green";
-    document.getElementById('controller-status').innerText = '계측 중...';
-    document.getElementById('controller-status-color').style.color = 'purple';
+    document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 중...';
+    document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'purple';
+    document.querySelectorAll(`div#container-${mode} input.sensor-id`).forEach(el => el.classList.add('disabled'));
+    document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.add('disabled'));
     notyf.success('계측 시작');
   }
 
-  // $RED, $OFF
+  /*************************************************************************
+   * protocol $RED: RED ON, GREEN OFF.
+   *   request : $RED
+   *   response: $OK-RED
+   ************************************************************************/
+  /*************************************************************************
+   * protocol $OFF: RED OFF, GREEN OFF
+   *   request : $OFF
+   *   response: $OK-OFF
+   ************************************************************************/
   else if (str.includes("$OK-RED") || str.includes("$OK-OFF")) {
-    document.getElementById('controller-status').innerText = '계측 대기';
-    document.getElementById('controller-status-color').style.color = 'green';
+    document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 대기';
+    document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
+    document.querySelectorAll(`div#container-${mode} input.sensor-id`).forEach(el => el.classList.remove('disabled'));
+    document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.remove('disabled'));
 
     if (controller.light === "green") {
       notyf.success('계측 종료');
@@ -124,17 +160,17 @@ ipcRenderer.on('serial-data', (evt, data) => {
 });
 
 /*******************************************************************************
- * serial failure
+ * serial failure handler                                                      *
  ******************************************************************************/
 ipcRenderer.on('serial-error', (evt, data) => {
-  document.getElementById('connect').classList.add('red');
-  document.getElementById('connect').classList.remove('disabled', 'green');
-  document.getElementById('controller-id').innerHTML = "";
+  document.querySelector(`div#container-${mode} .connect`).classList.add('red');
+  document.querySelector(`div#container-${mode} .connect`).classList.remove('disabled', 'green');
+  document.querySelector(`div#container-${mode} .controller-id`).innerHTML = "";
+  document.querySelector(`div#container-${mode} .controller-status`).innerText = '에러';
+  document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'orangered';
   document.querySelectorAll('.disabled').forEach(el => el.classList.remove('disabled'));
   document.querySelectorAll('.active-connect').forEach(el => el.classList.add('disabled'));
   document.querySelectorAll('.active-ready').forEach(el => el.classList.add('disabled'));
-  document.getElementById('controller-status').innerText = '에러';
-  document.getElementById('controller-status-color').style.color = 'orangered';
   notyf.error(data);
 
   if (timer.connect) {
@@ -143,9 +179,10 @@ ipcRenderer.on('serial-error', (evt, data) => {
 });
 
 /*******************************************************************************
- * UI event handlers
+ * UI event handlers                                                           *
  ******************************************************************************/
 function handle_events() {
+  /* navigation sidebar handler ***********************************************/
   document.querySelectorAll('.nav-mode').forEach(elem => {
     elem.addEventListener("click", () => {
       document.querySelectorAll('.nav-mode').forEach(el => el.classList.remove('active'));
@@ -157,38 +194,42 @@ function handle_events() {
     });
   });
 
-  document.getElementById("connect").addEventListener("click", async () => {
-    for (let p of await SerialPort.list()) {
-      switch (navigator.platform) {
-        case 'Win32': {
-          if (p.vendorId === "1999" && p.productId === "0514") {
-            controller.device = p;
-            ipcRenderer.send('serial-target', controller.device.path);
-            document.getElementById('connect').classList.add('disabled');
+  /* controller connection handler ********************************************/
+  document.querySelectorAll(".connect").forEach(elem => {
+    elem.addEventListener("click", async () => {
+      for (let p of await SerialPort.list()) {
+        switch (navigator.platform) {
+          case 'Win32': {
+            if (p.vendorId === "1999" && p.productId === "0514") {
+              controller.device = p;
+              ipcRenderer.send('serial-target', controller.device.path);
+              document.querySelector(`div#container-${mode} .connect`).classList.add('disabled');
 
-            timer.connect = setTimeout(() => {
-              notyf.error('컨트롤러 연결 실패 (응답 없음)');
-              document.getElementById('connect').classList.remove('disabled');
-            }, 1000);
+              timer.connect = setTimeout(() => {
+                notyf.error('컨트롤러 연결 실패 (응답 없음)');
+                document.querySelector(`div#container-${mode} .connect`).classList.remove('disabled');
+              }, 1000);
 
-            return;
+              return;
+            }
           }
-        }
 
-        // NOTE: not tested on other platforms
-        default: {
-          if (p.vendorId === 0x1999 && p.productId === 0x0514) {
-            controller.device = p;
-            ipcRenderer.send('serial-target', controller.device.path);
-            return;
+          // NOTE: not tested on other platforms
+          default: {
+            if (p.vendorId === 0x1999 && p.productId === 0x0514) {
+              controller.device = p;
+              ipcRenderer.send('serial-target', controller.device.path);
+              return;
+            }
           }
         }
       }
-    }
 
-    notyf.error(`컨트롤러 연결 실패 (장치 없음)`);
+      notyf.error(`컨트롤러 연결 실패 (장치 없음)`);
+    });
   });
 
+  /* sensor configuration handler *********************************************/
   document.querySelectorAll(`.set-sensor`).forEach(elem => {
     elem.addEventListener("click", () => {
       console.log('here?')
@@ -202,21 +243,18 @@ function handle_events() {
       switch (mode) {
         // competitive mode; variable lanes
         case 'competitive': {
-          let cnt_sensor = document.getElementById('cnt-lane').value;
-          active_sensors.competitive = [];
-
-          if (!cnt_sensor) {
-            return notyf.error('경기 레인 수를 입력하세요.');
-          }
-
-          cnt_sensor = Number(document.getElementById('cnt-lane').value);
+          let cnt_sensor = Number(document.getElementById('competitive-cnt-lane').value);
           cmd = `${String(cnt_sensor).padStart(3, 0)} `;
 
+          active_sensors.competitive = [];
+
           for (let i = 0; i < cnt_sensor; i++) {
-            let sensor = document.getElementById(`id-sensor-${i + 1}`).value;
+            let sensor = document.getElementById(`sensor-id-lane-${i + 1}`).value;
 
             if (!sensor) {
-              return notyf.error(`${i + 1}번 레인 센서 ID를 입력하세요.`);
+              return notyf.error(`${i + 1}번 레인의 센서 ID를 입력하세요.`);
+            } else if (Number(sensor) < 1 || Number(sensor) > 200) {
+              return notyf.error(`${i + 1}번 레인의 센서 ID가 유효하지 않습니다. 센서 ID 범위는 1 ~ 200 입니다.`);
             } else {
               active_sensors.competitive.push({ id: Number(sensor) });
               cmd += `${String(Number(sensor)).padStart(3, 0)} `;
@@ -236,7 +274,11 @@ function handle_events() {
           if (!start || !end) {
             return notyf.error(`${(!start ? '시작' : '끝')} 지점 센서 ID를 입력하세요.`);
           } else if (Number(start) === Number(end)) {
-            return notyf.error(`시작 센서 ID와 끝 센서 ID가 같습니다.`);
+            return notyf.error(`시작 지점 센서 ID와 끝 지점 센서 ID가 같습니다.`);
+          } else if (Number(start) < 1 || Number(end) > 200) {
+            return notyf.error(`시작 지점 센서 ID가 유효하지 않습니다. 센서 ID 범위는 1 ~ 200 입니다.`);
+          } else if (Number(end) < 1 || Number(end) > 200) {
+            return notyf.error(`끝 지점 센서 ID가 유효하지 않습니다. 센서 ID 범위는 1 ~ 200 입니다.`);
           }
 
           active_sensors.record.start = { id: Number(start) };
@@ -245,20 +287,60 @@ function handle_events() {
           break;
         }
 
+        // lap mode; single sensor
+        case 'lap': {
+          let cnt_sensor = 1;
+          let sensor = document.getElementById('lap-sensor-id').value;
+
+          if (!sensor) {
+            return notyf.error(`센서 ID를 입력하세요.`);
+          } else if (Number(sensor) < 1 || Number(sensor) > 200) {
+            return notyf.error(`센서 ID가 유효하지 않습니다. 센서 ID 범위는 1 ~ 200 입니다.`);
+          }
+
+          active_sensors.lap = { id: Number(sensor) };
+          cmd = `${String(cnt_sensor).padStart(3, 0)} ${String(Number(sensor)).padStart(3, 0)}`;
+          break;
+        }
+
         default: {
           return;
         }
       }
 
-
       elem.classList.add('disabled');
       document.querySelectorAll('.sensor-id').forEach(el => el.classList.add('disabled'));
       ipcRenderer.send('serial-request', `$SENSOR ${cmd}`);
-
-      // TODO: draw sensor UI
     });
   });
 
+  /* competitive mode lane count handler **************************************/
+  document.getElementById("cnt-lane").addEventListener("keyup", () => {
+    let cnt = document.getElementById("cnt-lane").value;
+
+    cnt = cnt ? Number(cnt) : 0;
+
+    if (cnt < 1 || cnt > 9) {
+      return notyf.error('레인 개수 범위는 1 ~ 9 개입니다.');
+    }
+
+    // back up previous values
+    let sensor_prev = [...document.querySelectorAll(`#competitive-sensor-table input.sensor-id`)].map(el => el.value);
+    let team_prev = [...document.querySelectorAll(`#competitive-team-table select.select-team`)].map(el => el.value);
+
+    let sensor_html = "";
+    let team_html = "";
+
+    for (let i = 1; i <= cnt; i++) {
+      sensor_html += template_sensor_tr(i, sensor_prev[i - 1] ? sensor_prev[i - 1] : "");
+      team_html += template_team_tr(i, team_prev[i - 1] ? team_prev[i - 1] : "");
+    }
+
+    document.getElementById("competitive-sensor-table").innerHTML = sensor_html;
+    document.getElementById("competitive-team-table").innerHTML = team_html;
+  });
+
+  /* traffic green light handler **********************************************/
   document.querySelectorAll(`.traffic-green`).forEach(elem => {
     elem.addEventListener("click", () => {
       /*************************************************************************
@@ -270,6 +352,7 @@ function handle_events() {
     });
   });
 
+  /* traffic red light handler ************************************************/
   document.querySelectorAll(`.traffic-red`).forEach(elem => {
     elem.addEventListener("click", () => {
       /*************************************************************************
@@ -281,6 +364,7 @@ function handle_events() {
     });
   });
 
+  /* traffic light off handler ************************************************/
   document.querySelectorAll(`.traffic-off`).forEach(elem => {
     elem.addEventListener("click", () => {
       /*************************************************************************
@@ -294,3 +378,31 @@ function handle_events() {
 }
 
 handle_events();
+
+/*******************************************************************************
+ * utility functions                                                           *
+ ******************************************************************************/
+function template_sensor_tr(num, value) {
+  return `
+    <tr>
+      <td>
+        <i class="fa fw fa-${num}"></i>
+      </td>
+      <td><input type="number" id="sensor-id-lane-${num}" class="sensor-id" placeholder="센서 ID" value=${value}></td>
+      <td id="sensor-offset-lane-${num}" style="padding-left: 1rem;"></td>
+    </tr>`;
+}
+
+function template_team_tr(num, value) {
+  return `
+    <tr>
+      <td>
+        <i class="fa fw fa-${num}"></i>
+      </td>
+      <td>
+        <select id="team-lane-${num}" class='select-team'>
+          <option selected disabled>팀 선택</option>
+        </select>
+      </td>
+    </tr>`;
+}
