@@ -17,7 +17,7 @@ let controller = {
   connected: false,
   time_synced: false,
   start: undefined,
-  measuring: false,
+  light: false, // false, green, red
 };
 
 let active_sensors = {
@@ -26,6 +26,7 @@ let active_sensors = {
     start: null,
     end: null,
   },
+  lap: undefined
 };
 
 /*******************************************************************************
@@ -103,21 +104,22 @@ ipcRenderer.on('serial-data', (evt, data) => {
   // $GREEN
   else if (str.includes("$START")) {
     controller.start = new Date();
-    controller.measuring = true;
+    controller.light = "green";
     document.getElementById('controller-status').innerText = '계측 중...';
     document.getElementById('controller-status-color').style.color = 'purple';
     notyf.success('계측 시작');
   }
 
   // $RED, $OFF
-  else if (str.includes("$OK")) {
+  else if (str.includes("$OK-RED") || str.includes("$OK-OFF")) {
     document.getElementById('controller-status').innerText = '계측 대기';
     document.getElementById('controller-status-color').style.color = 'green';
 
-    if (controller.measuring) {
-      controller.measuring = false;
+    if (controller.light === "green") {
       notyf.success('계측 종료');
     }
+
+    controller.light = str.includes("$OK-RED") ? "red" : false;
   }
 });
 
@@ -151,7 +153,7 @@ function handle_events() {
       mode = elem.id;
 
       document.querySelectorAll('.container').forEach(el => el.style.display = 'none');
-      document.getElementById(`container-${mode}`).style.display = 'block';
+      document.getElementById(`container-${mode}`).style.display = 'flex';
     });
   });
 
