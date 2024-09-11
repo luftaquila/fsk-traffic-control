@@ -38,6 +38,7 @@ div.container div.configuration {
 div.container div.monitor {
   flex-grow: 1;
   text-align: center;
+  padding-top: 4rem;
 }
 
 div.configuration div.mode-description {

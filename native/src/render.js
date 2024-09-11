@@ -48,7 +48,7 @@ ipcRenderer.on('serial-open', (evt, data) => {
  ******************************************************************************/
 ipcRenderer.on('serial-data', (evt, data) => {
   let str = String.fromCharCode(...data.data);
-  console.log(str)
+  console.log(str);
 
   // ignore non-protocol messages
   if (str[0] !== "$") {
@@ -232,7 +232,6 @@ function handle_events() {
   /* sensor configuration handler *********************************************/
   document.querySelectorAll(`.set-sensor`).forEach(elem => {
     elem.addEventListener("click", () => {
-      console.log('here?')
       /*************************************************************************
        * protocol $SENSOR: set sensors to use. $READY-ALL on all sensor LSNTP done
        *   request : $SENSOR <%03d sensor count> <...%03d sensor ids>
@@ -243,7 +242,7 @@ function handle_events() {
       switch (mode) {
         // competitive mode; variable lanes
         case 'competitive': {
-          let cnt_sensor = Number(document.getElementById('competitive-cnt-lane').value);
+          let cnt_sensor = Number(document.getElementById('cnt-lane').value);
           cmd = `${String(cnt_sensor).padStart(3, 0)} `;
 
           active_sensors.competitive = [];
@@ -338,6 +337,13 @@ function handle_events() {
 
     document.getElementById("competitive-sensor-table").innerHTML = sensor_html;
     document.getElementById("competitive-team-table").innerHTML = team_html;
+  });
+
+  /* title handler ************************************************************/
+  document.querySelectorAll(`input.event-name`).forEach(el => {
+    el.addEventListener("keyup", () => {
+      document.getElementById(`${mode}-title`).innerText = `${new Date().getFullYear()} FSK ${el.value}`;
+    });
   });
 
   /* traffic green light handler **********************************************/
