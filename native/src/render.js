@@ -172,11 +172,17 @@ ipcRenderer.on('serial-data', (evt, data) => {
  * serial failure handler                                                      *
  ******************************************************************************/
 ipcRenderer.on('serial-error', (evt, data) => {
-  document.querySelector(`div#container-${mode} .connect`).classList.add('red');
-  document.querySelector(`div#container-${mode} .connect`).classList.remove('disabled', 'green');
-  document.querySelector(`div#container-${mode} .controller-id`).innerHTML = "";
-  document.querySelector(`div#container-${mode} .controller-status`).innerText = '에러';
-  document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'orangered';
+  document.querySelector(`.connect`).classList.add('red');
+  document.querySelector(`.connect`).classList.remove('disabled', 'green');
+  document.querySelector(`.controller-id`).innerHTML = "";
+
+  if (data === "컨트롤러 연결 해제") {
+    document.querySelector(`.controller-status`).innerText = "연결 대기";
+    document.querySelector(`.controller-status-color`).style.color = 'orange';
+  } else {
+    document.querySelector(`.controller-status`).innerText = "오류 발생";
+    document.querySelector(`.controller-status-color`).style.color = 'orangered';
+  }
   document.querySelectorAll('.disabled').forEach(el => el.classList.remove('disabled'));
   document.querySelectorAll('.active-connect').forEach(el => el.classList.add('disabled'));
   document.querySelectorAll('.active-ready').forEach(el => el.classList.add('disabled'));
@@ -244,6 +250,18 @@ function handle_events() {
       }
 
       notyf.error(`컨트롤러 연결 실패 (장치 없음)`);
+    });
+  });
+
+  /* reset controller handler *************************************************/
+  document.querySelectorAll(`.reset`).forEach(elem => {
+    elem.addEventListener("click", () => {
+      /*************************************************************************
+       * protocol $RESET: see you again!
+       *   request : $RESET
+       *   response: -
+       ************************************************************************/
+      ipcRenderer.send('serial-request', `$RESET`);
     });
   });
 

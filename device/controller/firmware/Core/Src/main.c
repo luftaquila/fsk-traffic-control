@@ -82,6 +82,7 @@ typedef enum {
   CMD_GREEN,
   CMD_RED,
   CMD_OFF,
+  CMD_RESET,
   CMD_COUNT,
 } usb_cmd_type_t;
 
@@ -91,6 +92,7 @@ const char usb_cmd[CMD_COUNT][MAX_LEN_USB_CMD + 1] = {
   "$GREEN",
   "$RED",
   "$OFF",
+  "$RESET",
 };
 
 /* USER CODE END PV */
@@ -253,6 +255,15 @@ int main(void)
             USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
           }
 
+          /*************************************************************************
+           * protocol $RESET: see you again!
+           *   request : $RESET
+           *   response: -
+           ************************************************************************/
+          else if (USB_Command(CMD_RESET)) {
+            NVIC_SystemReset();
+          }
+
           // unknown command
           else {
             USB_Transmit((uint8_t *)"$ERROR", strlen("$ERROR"));
@@ -386,6 +397,23 @@ int main(void)
           USB_Transmit((uint8_t *)"$READY-ALL", strlen("$READY-ALL"));
         }
 
+        if (usb_rcv_flag) {
+          /*************************************************************************
+           * protocol $RESET: see you again!
+           *   request : $RESET
+           *   response: -
+           ************************************************************************/
+          if (USB_Command(CMD_RESET)) {
+            NVIC_SystemReset();
+          }
+
+          // unknown command
+          else {
+            USB_Transmit((uint8_t *)"$ERROR", strlen("$ERROR"));
+          }
+
+          usb_rcv_flag = false;
+        }
         break;
       } /* MODE_LSNTP */
 
@@ -485,6 +513,15 @@ int main(void)
             GREEN(false);
 
             USB_Transmit((uint8_t *)"$OK-OFF", strlen("$OK-OFF"));
+          }
+
+          /*************************************************************************
+           * protocol $RESET: see you again!
+           *   request : $RESET
+           *   response: -
+           ************************************************************************/
+          else if (USB_Command(CMD_RESET)) {
+            NVIC_SystemReset();
           }
 
           // unknown command
