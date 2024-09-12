@@ -29,6 +29,7 @@ div.container {
 div.container div.configuration,
 div.container div.monitor {
   padding: 1rem;
+  padding-bottom: 0;
 }
 
 div.container div.configuration {
@@ -49,7 +50,7 @@ div.configuration div.mode-description {
 
 div.container article {
   margin-left: 1rem;
-  margin-bottom: 3rem;
+  margin-bottom: 2.5rem;
 }
 
 div.container div.monitor article {
@@ -67,12 +68,12 @@ div.container article table td {
   padding: 0.2rem;
 }
 
-div.container article>div {
+div.container .configuration article>div {
   margin-left: 3rem;
   line-height: 1.5rem;
 }
 
-div.container article>div>div {
+div.container .configuration article>div>div {
   margin-bottom: 1rem;
 }
 
@@ -139,13 +140,83 @@ input.sensor-id {
 }
 
 .clock {
-  margin: 0.3rem 0 0!important;
+  margin: 0.3rem 0 0 !important;
   font-size: 3rem;
   font-weight: bold;
 }
 
 .reset {
   margin-left: 1rem;
+}
+
+.entry-team-list {
+  margin-top: 3rem !important;
+}
+
+#competitive-team-list {
+  display: flex;
+  justify-content: center;
+}
+
+#competitive-team-list td {
+  padding: 2rem;
+}
+
+.entry-lane {
+  font-size: 3rem;
+  padding-right: 3rem!important;
+}
+
+.entry-team {
+  font-size: 2.2rem;
+  font-weight: 500;
+  font-style: italic;
+  font-family: "MonoplexKR";
+}
+
+.entry-team-time {
+  margin-top: 1.5rem;
+  font-size: 2rem;
+  font-family: "Departure Mono";
+  text-shadow: 1px 1px 2px grey;
+}
+
+.entry-team-hidden {
+  display: none;
+}
+
+/*******************************************************************************
+* animations
+*******************************************************************************/
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+    color: orange;
+    text-shadow: 1px 1px 2px gold;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes blink-final {
+  0% {
+    color: orange;
+    text-shadow: 1px 1px 2px gold;
+  }
+
+  100% {
+    color: unset;
+    text-shadow: 1px 1px 2px grey;
+  }
+}
+
+.blink {
+  animation: blink 0.5s ease-in-out 3, blink-final 0.3s ease-in 1 forwards;
+  animation-delay: 0s, 1.5s;
 }
 
 /*******************************************************************************

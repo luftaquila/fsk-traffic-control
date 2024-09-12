@@ -196,8 +196,9 @@ ipcRenderer.on('serial-error', (evt, data) => {
 /*******************************************************************************
  * UI event handlers                                                           *
  ******************************************************************************/
-function handle_events() {
-  refresh_entries();
+async function handle_events() {
+  await refresh_entries();
+  document.querySelectorAll('select.select-team').forEach(el => el.innerHTML = template_team_select());
 
   /* navigation sidebar handler ***********************************************/
   document.querySelectorAll('.nav-mode').forEach(elem => {
@@ -352,16 +353,33 @@ function handle_events() {
       return;
     }
 
-    // TODO
+    let entry = entries.find(x => x.number === e.target.value);
+
+    if (!entry) {
+      return notyf.error("선택한 팀을 엔트리에서 찾을 수 없습니다.");
+    }
 
     switch (mode) {
       case 'record': {
-
+        document.querySelector(`div#container-${mode} .entry-team`).innerText = `${entry.number} ${entry.univ} ${entry.team}`;
+        document.querySelector(`div#container-${mode} .entry-team-time`).innerText = "RECORD 00:00:00.000";
+        document.querySelector(`div#container-${mode} .entry-team-hidden`).innerText = JSON.stringify(entry);
         break;
       }
 
       case 'competitive': {
+        let teams = [...document.querySelectorAll(`div#container-${mode} select.select-team`)].map(el => el.value);
 
+        if (teams.filter(x => x === entry.number).length > 1) {
+          e.target.options[0].selected = true;
+          return notyf.error("이미 다른 레인에 선택된 팀입니다.");
+        }
+
+        let lane = Number(e.target.id.replace('team-lane-', ''));
+        document.getElementById(`entry-lane-${lane}`).innerHTML = `<i class="fa fw fa-${lane}"></i>`;
+        document.getElementById(`entry-team-${lane}`).innerText = `${entry.number} ${entry.univ} ${entry.team}`;
+        document.getElementById(`entry-team-time-${lane}`).innerText = "RECORD 00:00:00.000";
+        document.getElementById(`entry-team-hidden-${lane}`).innerText = JSON.stringify(entry);
         break;
       }
 
@@ -392,14 +410,17 @@ function handle_events() {
 
     let sensor_html = "";
     let team_html = "";
+    let monitor_html = "";
 
     for (let i = 1; i <= cnt; i++) {
       sensor_html += template_sensor_tr(i, sensor_prev[i - 1] ? sensor_prev[i - 1] : "");
       team_html += template_team_tr(i, team_prev[i - 1] ? team_prev[i - 1] : "");
+      monitor_html += template_monitor_tr(i, team_prev[i - 1] ? team_prev[i - 1] : "");
     }
 
     document.getElementById("competitive-sensor-table").innerHTML = sensor_html;
     document.getElementById("competitive-team-table").innerHTML = team_html;
+    document.getElementById("competitive-team-list").innerHTML = monitor_html;
   });
 
   /* traffic green light handler **********************************************/
@@ -409,8 +430,16 @@ function handle_events() {
         return notyf.error('이벤트 이름을 입력하세요.');
       }
 
-      for (let team of document.querySelectorAll(`div#container-${mode} select.select-team`)) {
-        if (team.value === "팀 선택") {
+      let cnt = 0;
+
+      if (mode === 'record' || mode === 'competitive') {
+        for (let team of document.querySelectorAll(`div#container-${mode} select.select-team`)) {
+          if (team.value !== "팀 선택") {
+            cnt++;
+          }
+        }
+
+        if (cnt === 0) {
           return notyf.error('참가팀을 선택하세요.');
         }
       }
@@ -454,15 +483,25 @@ handle_events();
 /*******************************************************************************
  * utility functions                                                           *
  ******************************************************************************/
+let entries = undefined;
+
 async function refresh_entries() {
-  let entries = await ipcRenderer.invoke('read-entry');
+  try {
+    entries = await ipcRenderer.invoke('read-entry');
+  } catch (e) {
+    notyf.error(`엔트리 파일이 손상되었습니다.<br>${e.message}`);
+    document.querySelectorAll(`nav, div.container`).forEach(el => el.classList.add("disabled"));
+  }
+}
+
+function template_team_select(value) {
   let html = "<option selected disabled>팀 선택</option>";
 
   for (let entry of entries) {
-    html += `<option value='${entry.number}'>${entry.number} ${entry.univ} ${entry.team}</option>`;
+    html += `<option value='${entry.number}' ${entry.number == value ? "selected" : ""}>${entry.number} ${entry.univ} ${entry.team}</option>`;
   }
 
-  document.querySelectorAll('select.select-team').forEach(el => el.innerHTML = html);
+  return html;
 }
 
 function template_sensor_tr(num, value) {
@@ -484,8 +523,22 @@ function template_team_tr(num, value) {
       </td>
       <td>
         <select id="team-lane-${num}" class='select-team'>
-          <option selected disabled>팀 선택</option>
+          ${template_team_select(value)}
         </select>
+      </td>
+    </tr>`;
+}
+
+function template_monitor_tr(num, value) {
+  let entry = entries.find(x => x.number == value);
+
+  return `
+    <tr>
+      <td id="entry-lane-${num}" class="entry-team">${entry ? `<i class="fa fw fa-${num}"></i>` : '‎'}</td>
+      <td>
+        <div id="entry-team-${num}" class="entry-team">${entry ? `${entry.number} ${entry.univ} ${entry.team}` : '‎'}</div>
+        <div id="entry-team-time-${num}" class="entry-team-time">${entry ? 'RECORD 00:00:00.000' : '‎'}</div>
+        <div id="entry-team-hidden-${num}" class="entry-team-hidden">${entry ? JSON.stringify(entry) : '‎'}</div>
       </td>
     </tr>`;
 }
