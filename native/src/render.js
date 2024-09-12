@@ -6,6 +6,7 @@ let notyf = new Notyf({ ripple: false, duration: 3500 });
 
 let timer = {
   connect: undefined,
+  clock: undefined,
 };
 
 const events = ["가속", "스키드패드", "짐카나", "내구"];
@@ -73,6 +74,8 @@ ipcRenderer.on('serial-data', (evt, data) => {
       document.querySelector(`div#container-${mode} .controller-status`).innerText = '연결됨';
       document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
       document.querySelectorAll('.active-connect').forEach(el => el.classList.remove('disabled'));
+      document.querySelectorAll('.traffic').forEach(el => el.style["background-color"] = "grey");
+      document.querySelectorAll('.clock').forEach(el => el.innerText = "00:00:00.000");
       notyf.success(`${controller.id}번 컨트롤러 연결 완료 (${controller.device.path})`);
 
       if (timer.connect) {
@@ -133,11 +136,19 @@ ipcRenderer.on('serial-data', (evt, data) => {
       controller.start = new Date();
       controller.light = "green";
       document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = 'green';
+      document.querySelector(`div#container-${mode} .reset`).classList.add('disabled');
       document.querySelector(`div#container-${mode} .traffic-green`).classList.add('disabled');
       document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 중...';
       document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'purple';
       document.querySelector(`div#container-${mode} .event-name`).classList.add('disabled');
       document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.add('disabled'));
+
+      if (mode === 'competitive' || mode === 'lap') {
+        timer.clock = setInterval(() => {
+          document.querySelector(`div#container-${mode} .clock`).innerText = ms_to_clock(new Date() - controller.start);
+        }, 7);
+      }
+
       notyf.success('계측 시작');
     }
 
@@ -153,6 +164,7 @@ ipcRenderer.on('serial-data', (evt, data) => {
      ************************************************************************/
     else if (str.includes("$OK-RED") || str.includes("$OK-OFF")) {
       document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = str.includes("$OK-RED") ? "rgb(230, 20, 20)" : "grey";
+      document.querySelector(`div#container-${mode} .reset`).classList.remove('disabled');
       document.querySelector(`div#container-${mode} .traffic-green`).classList.remove('disabled');
       document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 대기';
       document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
@@ -161,6 +173,10 @@ ipcRenderer.on('serial-data', (evt, data) => {
 
       if (controller.light === "green") {
         notyf.success('계측 종료');
+      }
+
+      if (timer.clock) {
+        clearInterval(timer.clock);
       }
 
       controller.light = str.includes("$OK-RED") ? "red" : false;
@@ -172,24 +188,30 @@ ipcRenderer.on('serial-data', (evt, data) => {
  * serial failure handler                                                      *
  ******************************************************************************/
 ipcRenderer.on('serial-error', (evt, data) => {
-  document.querySelector(`.connect`).classList.add('red');
-  document.querySelector(`.connect`).classList.remove('disabled', 'green');
-  document.querySelector(`.controller-id`).innerHTML = "";
+  document.querySelectorAll(`.connect`).forEach(el => el.classList.add('red'));
+  document.querySelectorAll(`.connect`).forEach(el => el.classList.remove('disabled', 'green'));
+  document.querySelectorAll(`.controller-id`).forEach(el => el.innerHTML = "");
 
   if (data === "컨트롤러 연결 해제") {
-    document.querySelector(`.controller-status`).innerText = "연결 대기";
-    document.querySelector(`.controller-status-color`).style.color = 'orange';
+    document.querySelectorAll(`.controller-status`).forEach(el => el.innerText = "연결 대기");
+    document.querySelectorAll(`.controller-status-color`).forEach(el => el.style.color = 'orange');
   } else {
-    document.querySelector(`.controller-status`).innerText = "오류 발생";
-    document.querySelector(`.controller-status-color`).style.color = 'orangered';
+    document.querySelectorAll(`.controller-status`).forEach(el => el.innerText = "오류 발생");
+    document.querySelectorAll(`.controller-status-color`).forEach(el => el.style.color = 'orangered');
   }
+
   document.querySelectorAll('.disabled').forEach(el => el.classList.remove('disabled'));
   document.querySelectorAll('.active-connect').forEach(el => el.classList.add('disabled'));
   document.querySelectorAll('.active-ready').forEach(el => el.classList.add('disabled'));
+
   notyf.error(data);
 
   if (timer.connect) {
     clearTimeout(timer.connect);
+  }
+
+  if (timer.clock) {
+    clearInterval(timer.clock);
   }
 });
 
@@ -459,7 +481,7 @@ async function handle_events() {
       /*************************************************************************
        * protocol $RED: RED ON, GREEN OFF.
        *   request : $STOP
-       *   response: $OK
+       *   response: $OK-RED
        ************************************************************************/
       ipcRenderer.send('serial-request', `$RED`);
     });
@@ -471,7 +493,7 @@ async function handle_events() {
       /*************************************************************************
        * protocol $OFF: RED OFF, GREEN OFF
        *   request : $OFF
-       *   response: $OK
+       *   response: $OK-OFF
        ************************************************************************/
       ipcRenderer.send('serial-request', `$OFF`);
     });
@@ -492,6 +514,14 @@ async function refresh_entries() {
     notyf.error(`엔트리 파일이 손상되었습니다.<br>${e.message}`);
     document.querySelectorAll(`nav, div.container`).forEach(el => el.classList.add("disabled"));
   }
+}
+
+function ms_to_clock(ms) {
+  let hours = String(Math.floor(ms / (1000 * 60 * 60))).padStart(2, 0);
+  let minutes = String(Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, 0);
+  let seconds = String(Math.floor((ms % (1000 * 60)) / 1000)).padStart(2, 0);
+
+  return `${hours}:${minutes}:${seconds}.${String(ms % 1000).padStart(3, 0)}`;
 }
 
 function template_team_select(value) {
