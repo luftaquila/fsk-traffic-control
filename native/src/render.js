@@ -253,7 +253,7 @@ async function handle_events() {
               timer.connect = setTimeout(() => {
                 notyf.error('컨트롤러 연결 실패 (응답 없음)');
                 document.querySelectorAll(`.connect`).forEach(el => el.classList.remove('disabled'));
-              }, 1000);
+              }, 3000);
 
               return;
             }
