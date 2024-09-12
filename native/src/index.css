@@ -185,6 +185,16 @@ input.sensor-id {
   display: none;
 }
 
+#lap-log {
+  margin: auto;
+  width: 20rem;
+  max-height: 40rem;
+  overflow-y: scroll;
+  font-size: 1.5rem;
+  font-family: "Departure Mono";
+  line-height: 2rem;
+}
+
 /*******************************************************************************
 * animations
 *******************************************************************************/
