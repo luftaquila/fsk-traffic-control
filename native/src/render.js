@@ -9,8 +9,6 @@ let timer = {
   clock: undefined,
 };
 
-const events = ["가속", "스키드패드", "짐카나", "내구"];
-
 // UI mode; record, competitive, lap, settings
 let mode = "record";
 

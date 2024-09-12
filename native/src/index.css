@@ -267,6 +267,7 @@ input::-webkit-inner-spin-button {
   min-width: 80px;
   min-height: 100vh;
   background-color: #313443;
+  z-index: 99999;
 }
 
 .sidebar-navigation ul {
