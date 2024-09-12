@@ -47,121 +47,124 @@ ipcRenderer.on('serial-open', (evt, data) => {
  * serial data handler                                                         *
  ******************************************************************************/
 ipcRenderer.on('serial-data', (evt, data) => {
-  let str = String.fromCharCode(...data.data);
-  console.log(str);
+  let rcv = String.fromCharCode(...data.data);
+  console.log(rcv);
 
-  // ignore non-protocol messages
-  if (str[0] !== "$") {
+  rcv = rcv.match(/\$[^$]+/g);
+
+  // no protocol message found
+  if (!rcv) {
     return;
   }
 
-  // TODO: handle multiple messages in one line
+  // handle all protocol messages
+  for (let str of rcv) {
+    /*************************************************************************
+     * protocol $HELLO: greetings!
+     *   request : $HELLO
+     *   response: $HI <%03d my id>
+     ************************************************************************/
+    if (str.includes("$HI")) {
+      controller.id = Number(str.substr(4, 3));
+      controller.connected = true;
+      document.querySelector(`div#container-${mode} .connect`).classList.remove('red');
+      document.querySelector(`div#container-${mode} .connect`).classList.add('green');
+      document.querySelector(`div#container-${mode} .controller-id`).innerHTML = `<i class="fa fw fa-hashtag"></i>${controller.id}`;
+      document.querySelector(`div#container-${mode} .controller-status`).innerText = '연결됨';
+      document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
+      document.querySelectorAll('.active-connect').forEach(el => el.classList.remove('disabled'));
+      notyf.success(`${controller.id}번 컨트롤러 연결 완료 (${controller.device.path})`);
 
-  /*************************************************************************
-   * protocol $HELLO: greetings!
-   *   request : $HELLO
-   *   response: $HI <%03d my id>
-   ************************************************************************/
-  if (str.includes("$HI")) {
-    controller.id = Number(str.substr(4, 3));
-    controller.connected = true;
-    document.querySelector(`div#container-${mode} .connect`).classList.remove('red');
-    document.querySelector(`div#container-${mode} .connect`).classList.add('green');
-    document.querySelector(`div#container-${mode} .controller-id`).innerHTML = `<i class="fa fw fa-hashtag"></i>${controller.id}`;
-    document.querySelector(`div#container-${mode} .controller-status`).innerText = '연결됨';
-    document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
-    document.querySelectorAll('.active-connect').forEach(el => el.classList.remove('disabled'));
-    notyf.success(`${controller.id}번 컨트롤러 연결 완료 (${controller.device.path})`);
-
-    if (timer.connect) {
-      clearTimeout(timer.connect);
-    }
-  }
-
-  /*************************************************************************
-   * protocol $SENSOR: set sensors to use. $READY-ALL on all sensor LSNTP done
-   *   request : $SENSOR <%03d sensor count> <...%03d sensor ids>
-   *   response: $LSNTP on start, $READY-ALL on finish
-   ************************************************************************/
-  else if (str.includes("$LSNTP")) {
-    document.querySelector(`div#container-${mode} .controller-status`).innerText = '센서 시간 동기화 중... 센서 전원을 켜세요.';
-    document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'cornflowerblue';
-    notyf.success('센서 시간 동기화 중...');
-  }
-
-  else if (str.includes("$READY-ALL")) {
-    controller.time_synced = true;
-    document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 대기';
-    document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
-    document.querySelectorAll('.active-ready').forEach(el => el.classList.remove('disabled'));
-    notyf.success('센서 시간 동기화 완료 / 계측 대기');
-  }
-
-  /*************************************************************
-   * protocol $READY: notify sensor ready
-   *   notify: $READY <%03d sensor id> <%d sensor offset>
-   ************************************************************/
-  else if (str.includes("$READY ")) {
-    const id = Number(str.substr(7, 3));
-    const offset = Number(str.substr(10));
-
-    document.querySelectorAll(`div#container-${mode} input.sensor-id`).forEach(el => {
-      if (id === Number(el.value.trim())) {
-        el.parentElement.nextElementSibling.innerText = `(${offset} ms)`;
+      if (timer.connect) {
+        clearTimeout(timer.connect);
       }
-    });
-
-    notyf.success(`${id}번 센서 시간 오프셋: ${offset} ms`);
-  }
-
-  /*************************************************************
-   * protocol $REPORT: notify sensor report
-   *   notify: $REPORT <%03d sensor id> <%d timestamp>
-   ************************************************************/
-  else if (str.includes("$REPORT")) {
-    // TODO
-  }
-
-  /*************************************************************************
-   * protocol $GREEN: GREEN ON, RED OFF. mark timestamp
-   *   request : $GREEN
-   *   response: $START <start timestamp>
-   ************************************************************************/
-  else if (str.includes("$START")) {
-    controller.start = new Date();
-    controller.light = "green";
-    document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = 'green';
-    document.querySelector(`div#container-${mode} .traffic-green`).classList.add('disabled');
-    document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 중...';
-    document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'purple';
-    document.querySelector(`div#container-${mode} .event-name`).classList.add('disabled');
-    document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.add('disabled'));
-    notyf.success('계측 시작');
-  }
-
-  /*************************************************************************
-   * protocol $RED: RED ON, GREEN OFF.
-   *   request : $RED
-   *   response: $OK-RED
-   ************************************************************************/
-  /*************************************************************************
-   * protocol $OFF: RED OFF, GREEN OFF
-   *   request : $OFF
-   *   response: $OK-OFF
-   ************************************************************************/
-  else if (str.includes("$OK-RED") || str.includes("$OK-OFF")) {
-    document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = str.includes("$OK-RED") ? "rgb(230, 20, 20)" : "grey";
-    document.querySelector(`div#container-${mode} .traffic-green`).classList.remove('disabled');
-    document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 대기';
-    document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
-    document.querySelector(`div#container-${mode} .event-name`).classList.remove('disabled');
-    document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.remove('disabled'));
-
-    if (controller.light === "green") {
-      notyf.success('계측 종료');
     }
 
-    controller.light = str.includes("$OK-RED") ? "red" : false;
+    /*************************************************************************
+     * protocol $SENSOR: set sensors to use. $READY-ALL on all sensor LSNTP done
+     *   request : $SENSOR <%03d sensor count> <...%03d sensor ids>
+     *   response: $LSNTP on start, $READY-ALL on finish
+     ************************************************************************/
+    else if (str.includes("$LSNTP")) {
+      document.querySelector(`div#container-${mode} .controller-status`).innerText = '센서 시간 동기화 중... 센서 전원을 켜세요.';
+      document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'cornflowerblue';
+      notyf.success('센서 시간 동기화 중...');
+    }
+
+    else if (str.includes("$READY-ALL")) {
+      controller.time_synced = true;
+      document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 대기';
+      document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
+      document.querySelectorAll('.active-ready').forEach(el => el.classList.remove('disabled'));
+      notyf.success('센서 시간 동기화 완료 / 계측 대기');
+    }
+
+    /*************************************************************
+     * protocol $READY: notify sensor ready
+     *   notify: $READY <%03d sensor id> <%d sensor offset>
+     ************************************************************/
+    else if (str.includes("$READY ")) {
+      const id = Number(str.substr(7, 3));
+      const offset = Number(str.substr(10));
+
+      document.querySelectorAll(`div#container-${mode} input.sensor-id`).forEach(el => {
+        if (id === Number(el.value.trim())) {
+          el.parentElement.nextElementSibling.innerText = `(${offset} ms)`;
+        }
+      });
+
+      notyf.success(`${id}번 센서 시간 오프셋: ${offset} ms`);
+    }
+
+    /*************************************************************
+     * protocol $REPORT: notify sensor report
+     *   notify: $REPORT <%03d sensor id> <%d timestamp>
+     ************************************************************/
+    else if (str.includes("$REPORT")) {
+      // TODO
+    }
+
+    /*************************************************************************
+     * protocol $GREEN: GREEN ON, RED OFF. mark timestamp
+     *   request : $GREEN
+     *   response: $START <start timestamp>
+     ************************************************************************/
+    else if (str.includes("$START")) {
+      controller.start = new Date();
+      controller.light = "green";
+      document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = 'green';
+      document.querySelector(`div#container-${mode} .traffic-green`).classList.add('disabled');
+      document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 중...';
+      document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'purple';
+      document.querySelector(`div#container-${mode} .event-name`).classList.add('disabled');
+      document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.add('disabled'));
+      notyf.success('계측 시작');
+    }
+
+    /*************************************************************************
+     * protocol $RED: RED ON, GREEN OFF.
+     *   request : $RED
+     *   response: $OK-RED
+     ************************************************************************/
+    /*************************************************************************
+     * protocol $OFF: RED OFF, GREEN OFF
+     *   request : $OFF
+     *   response: $OK-OFF
+     ************************************************************************/
+    else if (str.includes("$OK-RED") || str.includes("$OK-OFF")) {
+      document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = str.includes("$OK-RED") ? "rgb(230, 20, 20)" : "grey";
+      document.querySelector(`div#container-${mode} .traffic-green`).classList.remove('disabled');
+      document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 대기';
+      document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
+      document.querySelector(`div#container-${mode} .event-name`).classList.remove('disabled');
+      document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.remove('disabled'));
+
+      if (controller.light === "green") {
+        notyf.success('계측 종료');
+      }
+
+      controller.light = str.includes("$OK-RED") ? "red" : false;
+    }
   }
 });
 
