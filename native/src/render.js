@@ -319,7 +319,7 @@ async function handle_events() {
         }
 
         case 'competitive': {
-          let cnt_sensor = Number(document.getElementById('cnt-lane').value.trim());
+          let cnt_sensor = Number(document.getElementById('cnt-lane').value);
           cmd = `${String(cnt_sensor).padStart(3, 0)} `;
 
           active_sensors.competitive = [];
@@ -422,14 +422,8 @@ async function handle_events() {
   });
 
   /* competitive mode lane count handler **************************************/
-  document.getElementById("cnt-lane").addEventListener("keyup", () => {
-    let cnt = document.getElementById("cnt-lane").value.trim();
-
-    cnt = cnt ? Number(cnt) : 0;
-
-    if (cnt < 1 || cnt > 4) {
-      return notyf.error('레인 개수 범위는 1 ~ 4 개입니다.');
-    }
+  document.getElementById("cnt-lane").addEventListener("change", () => {
+    let cnt = Number(document.getElementById("cnt-lane").value);
 
     // back up previous values
     let sensor_prev = [...document.querySelectorAll(`#competitive-sensor-table input.sensor-id`)].map(el => el.value);
@@ -445,6 +439,7 @@ async function handle_events() {
       monitor_html += template_monitor_tr(i, team_prev[i - 1] ? team_prev[i - 1] : "");
     }
 
+    document.getElementById("cnt-lane-text").innerText = cnt;
     document.getElementById("competitive-sensor-table").innerHTML = sensor_html;
     document.getElementById("competitive-team-table").innerHTML = team_html;
     document.getElementById("competitive-team-list").innerHTML = monitor_html;

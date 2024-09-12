@@ -118,6 +118,11 @@ table.table-traffic-light td {
   padding: 0 0.5rem !important;
 }
 
+input#cnt-lane {
+  margin-left: 1rem;
+  margin-bottom: 0.3rem;
+}
+
 select.select-team {
   width: 18rem;
   height: 1.7rem;
