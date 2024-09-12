@@ -16,9 +16,8 @@ jobs:
     - name: make
       run: |
         cd native
-        npm install -g electron-builder
         npm install
-        electron-builder
+        npm run build
     - uses: actions/upload-artifact@v4
       with:
         name: build.fsk-traffic-control-windows-x64
@@ -33,9 +32,8 @@ jobs:
       run: |
         cd native
         brew install python-setuptools
-        npm install -g electron-builder
         npm install
-        electron-builder
+        npm run build
     - uses: actions/upload-artifact@v4
       with:
         name: build.fsk-traffic-control-macos-arm64
@@ -50,9 +48,8 @@ jobs:
       run: |
         cd native
         pip install setuptools
-        npm install -g electron-builder
         npm install
-        electron-builder
+        npm run build
     - uses: actions/upload-artifact@v4
       with:
         name: build.fsk-traffic-control-linux-x64
