@@ -369,49 +369,56 @@ async function handle_events() {
     });
   });
 
-  /* team selection handler ***************************************************/
+  /* dynamic DOM event handler ************************************************/
+  document.addEventListener("click", e => {
+    /* team deselection handler ***********************************************/
+    let button = e.target.closest("button.deselect-team");
+
+    if (button) {
+      button.previousElementSibling.options[0].selected = true;
+      button.previousElementSibling.dispatchEvent(new Event("change", { "bubbles": true }));
+    }
+  });
+
   document.addEventListener("change", e => {
-    if (!e.target.matches("select.select-team")) {
-      return;
-    }
+    /* team selection handler *************************************************/
+    if (e.target.matches("select.select-team")) {
+      let deselect = false;
 
-    let entry = entries.find(x => x.number === e.target.value);
-
-    if (!entry) {
-      return notyf.error("선택한 팀을 엔트리에서 찾을 수 없습니다.");
-    }
-
-    switch (mode) {
-      case 'record': {
-        document.querySelector(`div#container-${mode} .entry-team`).innerText = `${entry.number} ${entry.univ} ${entry.team}`;
-        document.querySelector(`div#container-${mode} .entry-team-time`).innerText = "RECORD 00:00:00.000";
-        document.querySelector(`div#container-${mode} .entry-team-hidden`).innerText = JSON.stringify(entry);
-        break;
+      if (e.target.value === "팀 선택") {
+        deselect = true;
       }
 
-      case 'competitive': {
-        let teams = [...document.querySelectorAll(`div#container-${mode} select.select-team`)].map(el => el.value);
+      let entry = entries.find(x => x.number === e.target.value);
 
-        if (teams.filter(x => x === entry.number).length > 1) {
-          e.target.options[0].selected = true;
-          return notyf.error("이미 다른 레인에 선택된 팀입니다.");
+      if (!entry && !deselect) {
+        return notyf.error("선택한 팀을 엔트리에서 찾을 수 없습니다.");
+      }
+
+      switch (mode) {
+        case 'record': {
+          document.querySelector(`div#container-${mode} .entry-team`).innerText = deselect ? '‎' : `${entry.number} ${entry.univ} ${entry.team}`;
+          document.querySelector(`div#container-${mode} .entry-team-time`).innerText = deselect ? '‎' : "RECORD 00:00:00.000";
+          document.querySelector(`div#container-${mode} .entry-team-hidden`).innerText = deselect ? '‎' : JSON.stringify(entry);
+          break;
         }
 
-        let lane = Number(e.target.id.replace('team-lane-', ''));
-        document.getElementById(`entry-lane-${lane}`).innerHTML = `<i class="fa fw fa-${lane}"></i>`;
-        document.getElementById(`entry-team-${lane}`).innerText = `${entry.number} ${entry.univ} ${entry.team}`;
-        document.getElementById(`entry-team-time-${lane}`).innerText = "RECORD 00:00:00.000";
-        document.getElementById(`entry-team-hidden-${lane}`).innerText = JSON.stringify(entry);
-        break;
-      }
+        case 'competitive': {
+          let teams = [...document.querySelectorAll(`div#container-${mode} select.select-team`)].map(el => el.value);
 
-      case 'lap': {
+          if (!deselect && teams.filter(x => x === entry.number).length > 1) {
+            e.target.options[0].selected = true;
+            deselect = true;
+            notyf.error("이미 다른 레인에 선택된 팀입니다.");
+          }
 
-        break;
-      }
-
-      default: {
-        return;
+          let lane = Number(e.target.id.replace('team-lane-', ''));
+          document.getElementById(`entry-lane-${lane}`).innerHTML = deselect ? '‎' : `<i class="fa fw fa-${lane}"></i>`;
+          document.getElementById(`entry-team-${lane}`).innerText = deselect ? '‎' : `${entry.number} ${entry.univ} ${entry.team}`;
+          document.getElementById(`entry-team-time-${lane}`).innerText = deselect ? '‎' : "RECORD 00:00:00.000";
+          document.getElementById(`entry-team-hidden-${lane}`).innerText = deselect ? '‎' : JSON.stringify(entry);
+          break;
+        }
       }
     }
   });
@@ -422,8 +429,8 @@ async function handle_events() {
 
     cnt = cnt ? Number(cnt) : 0;
 
-    if (cnt < 1 || cnt > 9) {
-      return notyf.error('레인 개수 범위는 1 ~ 9 개입니다.');
+    if (cnt < 1 || cnt > 4) {
+      return notyf.error('레인 개수 범위는 1 ~ 4 개입니다.');
     }
 
     // back up previous values
@@ -555,6 +562,7 @@ function template_team_tr(num, value) {
         <select id="team-lane-${num}" class='select-team'>
           ${template_team_select(value)}
         </select>
+        <button class="deselect-team"><i class="fa fa-x"></i></button>
       </td>
     </tr>`;
 }

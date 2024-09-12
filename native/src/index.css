@@ -33,7 +33,7 @@ div.container div.monitor {
 }
 
 div.container div.configuration {
-  width: 450px;
+  width: 460px;
 }
 
 div.container div.monitor {
@@ -51,6 +51,10 @@ div.configuration div.mode-description {
 div.container article {
   margin-left: 1rem;
   margin-bottom: 2.5rem;
+}
+
+div.container article:last-child {
+  margin-bottom: 0;
 }
 
 div.container div.monitor article {
@@ -75,6 +79,10 @@ div.container .configuration article>div {
 
 div.container .configuration article>div>div {
   margin-bottom: 1rem;
+}
+
+div.container .configuration article>div>div:last-child {
+  margin-bottom: 0;
 }
 
 .disabled {
@@ -112,7 +120,13 @@ table.table-traffic-light td {
 
 select.select-team {
   width: 18rem;
-  height: 1.5rem;
+  height: 1.7rem;
+}
+
+button.deselect-team {
+  margin-left: 0.3rem;
+  width: 1.7rem;
+  height: 1.7rem;
 }
 
 input.event-name {

@@ -43,7 +43,7 @@
       <h1>🏎️ 기록 측정 모드</h1>
 
       <div class="mode-description">
-        2개의 센서가 각각 시작과 끝 지점에 위치하여<br>시작점 통과부터 끝 지점 통과까지의 소요 시간을 측정합니다.
+        2개의 센서가 각각 시작점과 도착점에 위치하여<br>시작점부터 도착점까지의 총 통과 소요 시간을 측정합니다.
       </div>
 
       <article>
@@ -87,14 +87,14 @@
           <table style="margin-bottom: 1rem;">
             <tr>
               <td>
-                <i class="fa fw fa-play"></i>START
+                <i class="fa fw fa-play"></i>시작점
               </td>
               <td>:</td>
               <td><input type="number" id="start-sensor-id" class="sensor-id" placeholder="센서 ID"></td>
               <td id="start-sensor-offset" style="padding-left: 1rem;"></td>
             </tr>
             <tr>
-              <td><i class="fa fw fa-stop"></i>END</td>
+              <td><i class="fa fw fa-stop"></i>도착점</td>
               <td>:</td>
               <td><input type="number" id="end-sensor-id" class="sensor-id" placeholder="센서 ID"></td>
               <td id="end-sensor-offset" style="padding-left: 1rem;"></td>
@@ -108,12 +108,16 @@
         <h2><i class="fa fw fa-calendar-check"></i>경기 설정</h2>
         <div>
           <div>
+            * 이벤트 이름이 같은 경기 기록은 동일한 파일에 기록됩니다.
+          </div>
+          <div>
             <input class='event-name' placeholder="이벤트 이름">
           </div>
           <div>
             <select class='select-team'>
               <option selected disabled>팀 선택</option>
             </select>
+            <button class="deselect-team"><i class="fa fa-x"></i></button>
           </div>
         </div>
       </article>
@@ -142,7 +146,7 @@
       <h1>🏁 동시 경주 모드</h1>
 
       <div class="mode-description">
-        각 레인의 끝 지점에 센서가 위치하여<br> 녹색등 점등 시점부터의 통과 소요 시간을 측정합니다.
+        각 레인의 도착점에 센서가 위치하여<br> 녹색등 점등 시점부터의 통과 소요 시간을 측정합니다.
       </div>
 
       <article>
@@ -208,6 +212,9 @@
         <h2><i class="fa fw fa-calendar-check"></i>경기 설정</h2>
         <div>
           <div>
+            * 이벤트 이름이 같은 경기 기록은 동일한 파일에 기록됩니다.
+          </div>
+          <div>
             <input class='event-name' placeholder="이벤트 이름">
           </div>
           <div>
@@ -220,6 +227,7 @@
                   <select id="team-lane-1" class='select-team'>
                     <option selected disabled>팀 선택</option>
                   </select>
+                  <button class="deselect-team"><i class="fa fa-x"></i></button>
                 </td>
               </tr>
               <tr>
@@ -230,6 +238,7 @@
                   <select id="team-lane-2" class='select-team'>
                     <option selected disabled>팀 선택</option>
                   </select>
+                  <button class="deselect-team"><i class="fa fa-x"></i></button>
                 </td>
               </tr>
             </table>
@@ -334,6 +343,9 @@
       <article>
         <h2><i class="fa fw fa-calendar-check"></i>경기 설정</h2>
         <div>
+          <div>
+            * 이벤트 이름이 같은 경기 기록은 동일한 파일에 기록됩니다.
+          </div>
           <div>
             <input class='event-name' placeholder="이벤트 이름">
           </div>
