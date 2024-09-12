@@ -310,6 +310,22 @@ int main(void)
               continue;
             }
 
+            // check sender in the registered sensors list
+            int32_t registered = false;
+
+            for (int i = 0; i < cnt_sensor; i++) {
+              if (req->sender == sensors[i]) {
+                registered = true;
+                break;
+              }
+            }
+
+            // ignore unregistered sensors
+            if (!registered) {
+              pos += size;
+              continue;
+            }
+
             // send reply
             switch (req->protocol) {
               case LORA_LSNTP_REQ: {
@@ -334,7 +350,13 @@ int main(void)
                 ack.header.sequence = req->sequence;
                 ack.header.sender = id;
                 ack.header.receiver = req->sender;
-                cnt_sensor_ready++;
+
+                // accept but not increase ready count if the sensor is already registered
+                if (sensors_ready[req->sender] == false) {
+                  sensors_ready[req->sender] = true;
+                  cnt_sensor_ready++;
+                }
+
                 lora_set_checksum(&ack.header, sizeof(lora_ack_t));
                 HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
                 LoRa_transmit(&rf, (uint8_t *)&ack, sizeof(lora_ack_t), 500);
