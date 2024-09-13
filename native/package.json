@@ -26,12 +26,15 @@
       "buildResources": "resources"
     },
     "files": [
+      "**/*",
+      "resources/fonts/**/*",
       "!entry.json"
     ],
     "asarUnpack": [
-      "./node_modules/notyf/**/*",
-      "./node_modules/@fortawesome/fontawesome-free/**/*",
-      "./resources/icons/**"
+      "node_modules/notyf/**/*",
+      "node_modules/@fortawesome/fontawesome-free/**/*",
+      "resources/icons/**/*",
+      "resources/fonts/**/*"
     ]
   },
   "devDependencies": {
