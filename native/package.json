@@ -25,6 +25,9 @@
     "directories": {
       "buildResources": "resources"
     },
+    "files": [
+      "!entry.json"
+    ],
     "asarUnpack": [
       "./node_modules/notyf/**/*",
       "./node_modules/@fortawesome/fontawesome-free/**/*",

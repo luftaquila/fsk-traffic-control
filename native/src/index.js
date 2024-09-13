@@ -111,11 +111,14 @@ ipcMain.on('serial-request', (event, data) => {
   serial.process.send({ key: 'serial-request', data: data });
 });
 
+// handle both dev and production environments
+const base_path = process.env.PORTABLE_EXECUTABLE_DIR ? process.env.PORTABLE_EXECUTABLE_DIR : app.getAppPath();
+
 ipcMain.handle('read-entry', async (event, data) => {
   return await (async () => {
     return new Promise((resolve, reject) => {
       try {
-        resolve(JSON.parse(fs.readFileSync("./entry.json")));
+        resolve(JSON.parse(fs.readFileSync(path.join(base_path, "/entry.json"))));
       } catch (e) {
         reject(e);
       }
@@ -127,7 +130,7 @@ ipcMain.handle('write-entry', async (event, data) => {
   return await (async () => {
     return new Promise((resolve, reject) => {
       try {
-        resolve(fs.writeFileSync('./entry.json', JSON.stringify(data, null, 2), 'utf-8'));
+        resolve(fs.writeFileSync(path.join(base_path, "/entry.json"), JSON.stringify(data, null, 2), 'utf-8'));
       } catch (e) {
         reject(e);
       }

@@ -511,7 +511,11 @@ async function refresh_entries() {
   try {
     entries = await ipcRenderer.invoke('read-entry');
   } catch (e) {
-    notyf.error(`엔트리 파일이 손상되었습니다.<br>${e.message}`);
+    if (e.message.includes("ENOENT")) {
+      notyf.error(`엔트리 파일을 찾을 수 없습니다.`);
+    } else {
+      notyf.error(`엔트리 파일이 손상되었습니다.<br>${e.message}`);
+    }
     document.querySelectorAll(`nav, div.container`).forEach(el => el.classList.add("disabled"));
   }
 }
