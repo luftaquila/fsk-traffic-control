@@ -1,6 +1,7 @@
 const { ipcRenderer } = require('electron');
 const { SerialPort } = require('serialport');
 const { Notyf } = require('notyf');
+const { DataTable, makeEditable } = require('simple-datatables');
 
 let notyf = new Notyf({ ripple: false, duration: 3500 });
 
@@ -18,6 +19,7 @@ let controller = {
   connected: false,
   time_synced: false,
   start: undefined,
+  running: false,
   light: false, // false, green, red
 };
 
@@ -132,6 +134,7 @@ ipcRenderer.on('serial-data', (evt, data) => {
      ************************************************************************/
     else if (str.includes("$START")) {
       controller.start = new Date();
+      controller.running = true;
       controller.light = "green";
       document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = 'green';
       document.querySelector(`div#container-${mode} .reset`).classList.add('disabled');
@@ -161,6 +164,7 @@ ipcRenderer.on('serial-data', (evt, data) => {
      *   response: $OK-OFF
      ************************************************************************/
     else if (str.includes("$OK-RED") || str.includes("$OK-OFF")) {
+      controller.running = false;
       document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = str.includes("$OK-RED") ? "rgb(230, 20, 20)" : "grey";
       document.querySelector(`div#container-${mode} .reset`).classList.remove('disabled');
       document.querySelector(`div#container-${mode} .traffic-green`).classList.remove('disabled');
@@ -186,6 +190,7 @@ ipcRenderer.on('serial-data', (evt, data) => {
  * serial failure handler                                                      *
  ******************************************************************************/
 ipcRenderer.on('serial-error', (evt, data) => {
+  controller.running = false;
   document.querySelectorAll(`.connect`).forEach(el => el.classList.add('red'));
   document.querySelectorAll(`.connect`).forEach(el => el.classList.remove('disabled', 'green'));
   document.querySelectorAll(`.controller-id`).forEach(el => el.innerHTML = "");
@@ -214,11 +219,71 @@ ipcRenderer.on('serial-error', (evt, data) => {
 });
 
 /*******************************************************************************
- * UI event handlers                                                           *
+ * UI drawers and event handlers                                                           *
  ******************************************************************************/
-async function handle_events() {
+async function setup() {
+  // set team select options and entry table
   await refresh_entries();
   document.querySelectorAll('select.select-team').forEach(el => el.innerHTML = template_team_select());
+
+  /* entry list table setup ***************************************************/
+  datatable = new DataTable("#entry-table", {
+    columns: [
+      { select: 0, sort: "asc" },
+      { select: 1 },
+      { select: 2 },
+      {
+        select: 3, sortable: false, type: "string", render: (value, td, row, cell) => {
+          return `<span class="delete-entry btn red small" onclick="delete_entry(${row})"><i class="fa fw fa-delete-left"></i>삭제</span>`;
+        }
+      },
+    ],
+    data: {
+      headings: [
+        {
+          text: "엔트리",
+          data: "number"
+        }, {
+          text: "학교",
+          data: "univ"
+        }, {
+          text: "팀",
+          data: "team"
+        }, {
+          text: "삭제",
+          data: "del"
+        }
+      ],
+    },
+    perPage: 100,
+    perPageSelect: [10, 20, 50, 100],
+  });
+
+  makeEditable(datatable, { contextMenu: false });
+
+  datatable.insert(entries.map(x => { x.del = ""; return x }));
+
+  datatable.on("editable.save.cell", async (newValue, oldValue, row, column) => {
+    if (newValue === oldValue) {
+      return;
+    }
+
+    if (controller.running) {
+      let cols = datatable.data.data[row].cells.map(c => c.data);
+      cols[column] = oldValue;
+      datatable.rows.updateRow(row, cols);
+      return notyf.error("계측 중에는 엔트리를 변경할 수 없습니다.");
+    }
+
+    update_entry_table("변경사항이 저장되었습니다.", "변경사항을 저장하지 못했습니다.");
+  });
+
+  /* prevent editor for the delete entry button *******************************/
+  document.getElementById("entry-table").addEventListener("dblclick", e => {
+    if (e.target.classList.contains('delete-entry') || e.target.querySelector(".delete-entry")) {
+      e.stopImmediatePropagation();
+    }
+  });
 
   /* navigation sidebar handler ***********************************************/
   document.querySelectorAll('.nav-mode').forEach(elem => {
@@ -374,7 +439,7 @@ async function handle_events() {
 
     if (button) {
       button.previousElementSibling.options[0].selected = true;
-      button.previousElementSibling.dispatchEvent(new Event("change", { "bubbles": true }));
+      button.previousElementSibling.dispatchEvent(new Event("change", { bubbles: true }));
     }
   });
 
@@ -392,6 +457,8 @@ async function handle_events() {
       if (!entry && !deselect) {
         return notyf.error("선택한 팀을 엔트리에서 찾을 수 없습니다.");
       }
+
+      let mode = e.target.closest('div.container').id.replace("container-", "");
 
       switch (mode) {
         case 'record': {
@@ -498,9 +565,34 @@ async function handle_events() {
       ipcRenderer.send('serial-request', `$OFF`);
     });
   });
+
+  /* entry list handler *******************************************************/
+  document.getElementById("entry-add").addEventListener("click", async () => {
+    let entry = document.getElementById("entry-add-number").value.trim();
+    let univ = document.getElementById("entry-add-univ").value.trim();
+    let team = document.getElementById("entry-add-team").value.trim();
+
+    if (!entry || !univ || !team) {
+      return notyf.error("추가할 엔트리 정보에 누락된 값이 있습니다.");
+    }
+
+    if (entries.find(x => Number(x.number) === Number(entry))) {
+      return notyf.error("이미 존재하는 엔트리 번호입니다.");
+    }
+
+    datatable.rows.add([entry, univ, team, '']);
+    datatable.columns.sort(0, "asc");
+
+    update_entry_table("엔트리가 추가되었습니다.", "엔트리를 추가하지 못했습니다.");
+
+    document.getElementById("entry-add-number").value = "";
+    document.getElementById("entry-add-univ").value = "";
+    document.getElementById("entry-add-team").value = "";
+    document.getElementById("entry-add-number").focus();
+  });
 }
 
-handle_events();
+setup();
 
 /*******************************************************************************
  * utility functions                                                           *
@@ -576,4 +668,30 @@ function template_monitor_tr(num, value) {
         <div id="entry-team-hidden-${num}" class="entry-team-hidden">${entry ? JSON.stringify(entry) : '‎'}</div>
       </td>
     </tr>`;
+}
+
+function delete_entry(row) {
+  datatable.rows.remove(row);
+  update_entry_table("엔트리가 삭제되었습니다.", "엔트리를 삭제하지 못했습니다.");
+}
+
+async function update_entry_table(success_msg, error_msg) {
+  let edited = datatable.data.data.map(x => x.cells.map(y => y.text));
+  edited = edited.map(entry => { return { number: entry[0], univ: entry[1], team: entry[2] } });
+  edited = edited.sort((a, b) => Number(a.number) - Number(b.number));
+
+  try {
+    await ipcRenderer.invoke('write-entry', edited);
+    await refresh_entries();
+
+    document.querySelectorAll('select.select-team').forEach(el => {
+      el.innerHTML = template_team_select(el.value);
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    notyf.success(success_msg);
+  } catch (e) {
+    notyf.error(`${error_msg}<br>${e.message}`);
+  }
+
 }

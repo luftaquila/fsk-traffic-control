@@ -16,6 +16,12 @@
   box-shadow: 0px 1px 0px 0px;
 }
 
+.btn.small {
+  height: 24px;
+  padding: 2px 10px 0px 10px;
+  font-size: 0.9rem;
+}
+
 .blue {
   background-color: #55acee!important;
   box-shadow: 0px 5px 0px 0px #3C93D5!important;

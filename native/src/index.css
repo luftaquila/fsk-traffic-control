@@ -183,7 +183,7 @@ input.sensor-id {
 
 .entry-lane {
   font-size: 3rem;
-  padding-right: 1.7rem!important;
+  padding-right: 1.7rem !important;
 }
 
 .entry-team {
@@ -212,6 +212,28 @@ input.sensor-id {
   font-size: 1.5rem;
   font-family: "Departure Mono";
   line-height: 2rem;
+}
+
+#container-settings .mode-description {
+  height: unset;
+}
+
+#container-settings .mode-description ul>li {
+  margin-bottom: 0.5rem;
+}
+
+#container-settings .mode-description ul>li>ul {
+  margin-top: 0.2rem;
+}
+
+.entry-add {
+  height: 1.5rem;
+  margin-right: 1rem;
+  padding-left: 0.3rem;
+}
+
+#entry-table td {
+  padding: 0.5rem 0;
 }
 
 /*******************************************************************************
