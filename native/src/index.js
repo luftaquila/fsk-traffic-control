@@ -114,11 +114,25 @@ ipcMain.on('serial-request', (event, data) => {
 // handle both dev and production environments
 const base_path = process.env.PORTABLE_EXECUTABLE_DIR ? process.env.PORTABLE_EXECUTABLE_DIR : app.getAppPath();
 
-ipcMain.handle('read-entry', async (event, data) => {
+ipcMain.handle('read-file', async (event, data) => {
   return await (async () => {
     return new Promise((resolve, reject) => {
       try {
-        resolve(JSON.parse(fs.readFileSync(path.join(base_path, "/entry.json"))));
+        resolve(JSON.parse(fs.readFileSync(path.join(base_path, data))));
+      } catch (e) {
+        reject(e);
+      }
+    });
+  })();
+});
+
+ipcMain.handle('append-file', async (event, data) => {
+  return await (async () => {
+    return new Promise((resolve, reject) => {
+      try {
+        let file = path.join(base_path, data.type === "log" ? '/log.json' : `/${today()}-${data.name}.json`);
+        fs.appendFileSync(file, JSON.stringify(data.data, null, 2) + '\n');
+        resolve(file);
       } catch (e) {
         reject(e);
       }
@@ -130,7 +144,7 @@ ipcMain.handle('write-entry', async (event, data) => {
   return await (async () => {
     return new Promise((resolve, reject) => {
       try {
-        resolve(fs.writeFileSync(path.join(base_path, "/entry.json"), JSON.stringify(data, null, 2), 'utf-8'));
+        resolve(fs.writeFileSync(path.join(base_path, "/entry.json"), JSON.stringify(data, null, 2)));
       } catch (e) {
         reject(e);
       }
@@ -145,3 +159,8 @@ ipcMain.on('open-url', (event, data) => {
 ipcMain.on('quit', event => {
   app.quit();
 });
+
+function today() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+}

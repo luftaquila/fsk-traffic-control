@@ -62,8 +62,6 @@ ipcRenderer.on('serial-data', async (evt, data) => {
   let rcv = String.fromCharCode(...data.data);
   console.log(rcv);
 
-  // TODO: back up all received datas
-
   rcv = rcv.match(/\$[^$]+/g);
 
   // no protocol message found
@@ -73,6 +71,14 @@ ipcRenderer.on('serial-data', async (evt, data) => {
 
   // handle all protocol messages
   for (let str of rcv) {
+    // back up to the log.json
+    await ipcRenderer.invoke('append-file', {
+      type: "log",
+      data: {
+        date: new Date(),
+        data: str,
+      }
+    });
     /*************************************************************************
      * protocol $HELLO: greetings!
      *   request : $HELLO
@@ -192,8 +198,9 @@ ipcRenderer.on('serial-data', async (evt, data) => {
             }
 
             try {
-              let file = await ipcRenderer.invoke('write-file', {
+              let file = await ipcRenderer.invoke('append-file', {
                 name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
+                type: "result",
                 data: {
                   datetime: new Date(),
                   lane: "N/A",
@@ -253,8 +260,9 @@ ipcRenderer.on('serial-data', async (evt, data) => {
           }
 
           try {
-            let file = await ipcRenderer.invoke('write-file', {
+            let file = await ipcRenderer.invoke('append-file', {
               name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
+              type: "result",
               data: {
                 datetime: new Date(),
                 lane: sensor.lane,
@@ -288,8 +296,9 @@ ipcRenderer.on('serial-data', async (evt, data) => {
 
           // save result to the file
           try {
-            let file = await ipcRenderer.invoke('write-file', {
+            let file = await ipcRenderer.invoke('append-file', {
               name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
+              type: "result",
               data: {
                 datetime: new Date(),
                 lane: "N/A",
@@ -796,7 +805,7 @@ let entries = undefined;
 
 async function refresh_entries() {
   try {
-    entries = await ipcRenderer.invoke('read-entry');
+    entries = await ipcRenderer.invoke('read-file', "/entry.json");
   } catch (e) {
     if (e.message.includes("ENOENT")) {
       notyf.error(`엔트리 파일을 찾을 수 없습니다.`);
