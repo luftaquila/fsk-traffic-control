@@ -22,18 +22,18 @@ jobs:
       - run: |
           zip -j firmware-controller-${{ github.ref_name }}.zip controller/firmware.*
           zip -j firmware-sensor-${{ github.ref_name }}.zip sensor/firmware.*
-          mv build.fsk-traffic-control-windows-x64/*.exe fsk-traffic-control-windows-x64-${{ github.ref_name }}.exe
-          mv build.fsk-traffic-control-macos-arm64/*.dmg fsk-traffic-control-macos-arm64-${{ github.ref_name }}.dmg
-          mv build.fsk-traffic-control-linux-x64/*.AppImage fsk-traffic-control-linux-x64-${{ github.ref_name }}.AppImage
+          mv build.fsk-traffic-control-windows-x64/fsk-traffic-control.exe fsk-traffic-control-windows-x64-${{ github.ref_name }}.exe
+          mv build.fsk-traffic-control-macos-arm64/fsk-traffic-control fsk-traffic-control-macos-arm64-${{ github.ref_name }}
+          mv build.fsk-traffic-control-linux-x64/fsk-traffic-control fsk-traffic-control-linux-x64-${{ github.ref_name }}
           mv native/fsk-entry.json fsk-entry.json
       - uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
           artifacts: |
             firmware-*.zip
-            fsk-traffic-control-windows-x64-*.exe
-            fsk-traffic-control-macos-arm64-*.dmg
-            fsk-traffic-control-linux-x64-*.AppImage
+            fsk-traffic-control-windows-x64-*
+            fsk-traffic-control-macos-arm64-*
+            fsk-traffic-control-linux-x64-*
             fsk-entry.json
           commit: ${{ github.sha }}
           tag: ${{ github.ref_name }}
@@ -43,7 +43,8 @@ jobs:
 
             Before open the `fsk-traffic-control` executable, download `fsk-entry.json` and put it in the same directory with the executable.
 
-            In MacOS, run the following command before open the installed `fsk-traffic-control` for the first time. Unless, it will say `"fsk-traffic-control" is damaged and can’t be opened.` because this is not a signed application.
+            In MacOS, run the following command before open the installed `fsk-traffic-control` for the first time.\
+            Unless, it will say `"fsk-traffic-control" is damaged and can’t be opened.` since the packages are not signed
 
             ```sh
             xattr -c /Applications/fsk-traffic-control.app

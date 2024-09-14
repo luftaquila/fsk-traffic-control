@@ -1,7 +1,4 @@
-const { ipcRenderer } = require('electron');
-const { SerialPort } = require('serialport');
-const { Notyf } = require('notyf');
-const { DataTable, makeEditable } = require('simple-datatables');
+const { invoke } = window.__TAURI__.tauri;
 
 let notyf = new Notyf({ ripple: false, duration: 3500 });
 
@@ -42,6 +39,10 @@ let active_sensors = {
   competitive: [],
   lap: undefined,
 };
+
+window.addEventListener("DOMContentLoaded", () => {
+  setup();
+});
 
 /*******************************************************************************
  * serial port open handler                                                    *
@@ -909,8 +910,6 @@ async function update_log_viewer() {
     return notyf.error(`파일 목록을 가져오지 못했습니다.<br>${e.message}`);
   }
 }
-
-setup();
 
 /*******************************************************************************
  * utility functions                                                           *
