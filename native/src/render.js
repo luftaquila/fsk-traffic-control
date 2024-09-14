@@ -8,6 +8,17 @@ let notyf = new Notyf({ ripple: false, duration: 3500 });
 let timer = {
   connect: undefined,
   clock: undefined,
+  record: undefined,
+  competitive: [],
+};
+
+let timestamps = {
+  record: {
+    start: undefined,
+    end: undefined,
+  },
+  competitive: [],
+  lap: undefined
 };
 
 // UI mode; record, competitive, lap, settings
@@ -24,12 +35,12 @@ let controller = {
 };
 
 let active_sensors = {
-  competitive: [],
   record: {
     start: null,
     end: null,
   },
-  lap: undefined
+  competitive: [],
+  lap: undefined,
 };
 
 /*******************************************************************************
@@ -47,9 +58,11 @@ ipcRenderer.on('serial-open', (evt, data) => {
 /*******************************************************************************
  * serial data handler                                                         *
  ******************************************************************************/
-ipcRenderer.on('serial-data', (evt, data) => {
+ipcRenderer.on('serial-data', async (evt, data) => {
   let rcv = String.fromCharCode(...data.data);
   console.log(rcv);
+
+  // TODO: back up all received datas
 
   rcv = rcv.match(/\$[^$]+/g);
 
@@ -76,6 +89,7 @@ ipcRenderer.on('serial-data', (evt, data) => {
       document.querySelectorAll('.active-connect').forEach(el => el.classList.remove('disabled'));
       document.querySelectorAll('.traffic').forEach(el => el.style["background-color"] = "grey");
       document.querySelectorAll('.clock').forEach(el => el.innerText = "00:00:00.000");
+
       notyf.success(`${controller.id}번 컨트롤러 연결 완료 (${controller.device.path})`);
 
       if (timer.connect) {
@@ -124,7 +138,179 @@ ipcRenderer.on('serial-data', (evt, data) => {
      *   notify: $REPORT <%03d sensor id> <%d timestamp>
      ************************************************************/
     else if (str.includes("$REPORT")) {
-      // TODO
+      const id = Number(str.substr(7, 3));
+      const ts = Number(str.substr(10));
+
+      switch (mode) {
+        case 'record': {
+          if (id === active_sensors.record.start.id) {
+            if (timestamps.record.start) {
+              return notyf.error(`출발점 센서가 알 수 없는 물체를 검출했습니다.<br>센서 리포트를 무시합니다.<br>${str}`);
+            }
+
+            timestamps.record.start = ts;
+            timer.clock = setInterval(() => {
+              document.querySelector(`div#container-${mode} .clock`).innerText = ms_to_clock(new Date() - controller.start);
+            }, 7);
+
+            let clock = document.querySelector(`div#container-${mode} .entry-team-time`);
+            clock.innerText = '+' + ms_to_clock(controller.start - timestamps.record.start);
+            clock.classList.add('blink');
+
+            notyf.success("출발점 센서가 차량 출발을 검출했습니다.");
+          }
+
+          else if (id === active_sensors.record.end.id) {
+            if (timestamps.record.end) {
+              return notyf.error(`도착점 센서가 알 수 없는 물체를 검출했습니다.<br>센서 리포트를 무시합니다.<br>${str}`);
+            }
+
+            if (!timestamps.record.start) {
+              return notyf.error(`도착점 센서가 출발점 센서보다 먼저 물체를 검출했습니다.<br>센서 리포트를 무시합니다.<br>${str}`);
+            }
+
+            timestamps.record.end = ts;
+            let result = timestamps.record.end - timestamps.record.start;
+            clearInterval(timer.clock);
+
+            // set clock
+            let clock = document.querySelector(`div#container-${mode} .clock`);
+            clock.innerText = ms_to_clock(result);
+            clock.classList.add('blink');
+            
+            // save result to the file
+            let number = document.querySelector(`div#container-${mode} select.select-team`).value;
+            let entry = entries.find(x => x.number === number);
+
+            if (!entry) {
+              notyf.error("주행한 팀을 엔트리에서 찾을 수 없습니다.<br>파일에 UNKNOWN으로 기록됩니다.");
+              entry = {
+                number: number,
+                univ: "UNKNOWN",
+                team: "UNKNOWN",
+              };
+            }
+
+            try {
+              let file = await ipcRenderer.invoke('write-file', {
+                name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
+                data: {
+                  datetime: new Date(),
+                  lane: "N/A",
+                  entry: {
+                    number: entry.number,
+                    univ: entry.univ,
+                    team: entry.team,
+                  },
+                  result: {
+                    ms: result,
+                    text: ms_to_clock(result),
+                  },
+                },
+              });
+              notyf.success(`도착점 센서가 차량을 검출했습니다.<br>${file} 파일에 기록이 저장되었습니다.`);
+            } catch (e) {
+              notyf.error(`도착점 센서가 차량을 검출했으나 결과를 파일에 저장하는데 실패했습니다.<br>${e.message}`);
+            }
+          }
+
+          else {
+            return notyf.error(`센서 리포트가 손상되었습니다.<br>${str}`);
+          }
+
+          break;
+        }
+
+        case 'competitive': {
+          let sensor = active_sensors.competitive.find(x => x.id === id);
+
+          if (!sensor) {
+            return notyf.error(`센서 리포트가 손상되었습니다.<br>${str}`);
+          }
+
+          if (timestamps.competitive[sensor.lane]) {
+            return notyf.error(`${sensor.lane}번 레인 센서가 알 수 없는 물체를 검출했습니다.<br>센서 리포트를 무시합니다.<br>${str}`);
+          }
+
+          timestamps.competitive[sensor.lane] = ts;
+          let result = timestamps.competitive[sensor.lane] - controller.start;
+
+          let clock = document.getElementById(`entry-team-time-${sensor.lane}`);
+          clock.innerText = ms_to_clock(result);
+          clock.classList.add('blink');
+
+          // save result to the file
+          let number = document.getElementById(`team-lane-${sensor.lane}`).value;
+          let entry = entries.find(x => x.number === number);
+
+          if (!entry) {
+            notyf.error("주행한 팀을 엔트리에서 찾을 수 없습니다.<br>파일에 UNKNOWN으로 기록됩니다.");
+            entry = {
+              number: number,
+              univ: "UNKNOWN",
+              team: "UNKNOWN",
+            };
+          }
+
+          try {
+            let file = await ipcRenderer.invoke('write-file', {
+              name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
+              data: {
+                datetime: new Date(),
+                lane: sensor.lane,
+                entry: {
+                  number: entry.number,
+                  univ: entry.univ,
+                  team: entry.team,
+                },
+                result: {
+                  ms: result,
+                  text: ms_to_clock(result),
+                },
+              },
+            });
+            notyf.success(`${sensor.lane}번 레인 센서가 차량을 검출했습니다.<br>${file} 파일에 기록이 저장되었습니다.`);
+          } catch (e) {
+            notyf.error(`${sensor.lane}번 레인 센서가 차량을 검출했으나 결과를 파일에 저장하는데 실패했습니다.<br>${e.message}`);
+          }
+          break;
+        }
+
+        case 'lap': {
+          if (active_sensors.lap.id !== id) {
+            return notyf.error(`센서 리포트가 손상되었습니다.<br>${str}`);
+          }
+
+          let diff = timestamps.lap ? ts - timestamps.lap : ts - controller.start;
+          timestamps.lap = ts;
+
+          document.getElementById('lap-log').innerText += `${ms_to_clock(diff)}<br>`;
+
+          // save result to the file
+          try {
+            let file = await ipcRenderer.invoke('write-file', {
+              name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
+              data: {
+                datetime: new Date(),
+                lane: "N/A",
+                entry: {
+                  number: "N/A",
+                  univ: "N/A",
+                  team: "N/A",
+                },
+                result: {
+                  ms: result,
+                  text: ms_to_clock(result),
+                },
+              },
+            });
+            notyf.success(`센서가 차량을 검출했습니다.<br>${file} 파일에 기록이 저장되었습니다.`);
+          } catch (e) {
+            notyf.error(`센서가 차량을 검출했으나 결과를 파일에 저장하는데 실패했습니다.<br>${e.message}`);
+          }
+          break;
+        }
+      }
     }
 
     /*************************************************************************
@@ -172,6 +358,17 @@ ipcRenderer.on('serial-data', (evt, data) => {
       document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
       document.querySelector(`div#container-${mode} .event-name`).classList.remove('disabled');
       document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.remove('disabled'));
+      document.querySelectorAll(`div#container-${mode} .clock.blink`).forEach(el => el.classList.remove('blink'));
+
+      // reset all timestamps
+      timestamps = {
+        record: {
+          start: undefined,
+          end: undefined,
+        },
+        competitive: [],
+        lap: undefined
+      };
 
       if (controller.light === "green") {
         notyf.success('계측 종료');
@@ -368,13 +565,13 @@ async function setup() {
           let end = document.getElementById(`end-sensor-id`).value.trim();
 
           if (!start || !end) {
-            return notyf.error(`${(!start ? '시작' : '끝')} 지점 센서 ID를 입력하세요.`);
+            return notyf.error(`${(!start ? '출발' : '도착')}점 센서 ID를 입력하세요.`);
           } else if (Number(start) === Number(end)) {
-            return notyf.error(`시작 지점 센서 ID와 끝 지점 센서 ID가 같습니다.`);
+            return notyf.error(`출발점 센서 ID와 도착점 센서 ID가 같습니다.`);
           } else if (Number(start) < 1 || Number(end) > 200) {
-            return notyf.error(`시작 지점 센서 ID가 유효하지 않습니다. 센서 ID 범위는 1 ~ 200 입니다.`);
+            return notyf.error(`출발점 센서 ID가 유효하지 않습니다.<br>센서 ID 범위는 1 ~ 200 입니다.`);
           } else if (Number(end) < 1 || Number(end) > 200) {
-            return notyf.error(`끝 지점 센서 ID가 유효하지 않습니다. 센서 ID 범위는 1 ~ 200 입니다.`);
+            return notyf.error(`도착점 센서 ID가 유효하지 않습니다.<br>센서 ID 범위는 1 ~ 200 입니다.`);
           }
 
           active_sensors.record.start = { id: Number(start) };
@@ -395,9 +592,9 @@ async function setup() {
             if (!sensor) {
               return notyf.error(`${i + 1}번 레인의 센서 ID를 입력하세요.`);
             } else if (Number(sensor) < 1 || Number(sensor) > 200) {
-              return notyf.error(`${i + 1}번 레인의 센서 ID가 유효하지 않습니다. 센서 ID 범위는 1 ~ 200 입니다.`);
+              return notyf.error(`${i + 1}번 레인의 센서 ID가 유효하지 않습니다.<br>센서 ID 범위는 1 ~ 200 입니다.`);
             } else {
-              active_sensors.competitive.push({ id: Number(sensor) });
+              active_sensors.competitive.push({ id: Number(sensor), lane: i + 1 });
               cmd += `${String(Number(sensor)).padStart(3, 0)} `;
             }
           }
@@ -413,7 +610,7 @@ async function setup() {
           if (!sensor) {
             return notyf.error(`센서 ID를 입력하세요.`);
           } else if (Number(sensor) < 1 || Number(sensor) > 200) {
-            return notyf.error(`센서 ID가 유효하지 않습니다. 센서 ID 범위는 1 ~ 200 입니다.`);
+            return notyf.error(`센서 ID가 유효하지 않습니다.<br>센서 ID 범위는 1 ~ 200 입니다.`);
           }
 
           active_sensors.lap = { id: Number(sensor) };
@@ -463,8 +660,7 @@ async function setup() {
       switch (mode) {
         case 'record': {
           document.querySelector(`div#container-${mode} .entry-team`).innerText = deselect ? '‎' : `${entry.number} ${entry.univ} ${entry.team}`;
-          document.querySelector(`div#container-${mode} .entry-team-time`).innerText = deselect ? '‎' : "RECORD 00:00:00.000";
-          document.querySelector(`div#container-${mode} .entry-team-hidden`).innerText = deselect ? '‎' : JSON.stringify(entry);
+          document.querySelector(`div#container-${mode} .entry-team-time`).innerText = deselect ? '‎' : "+00:00:00.000";
           break;
         }
 
@@ -481,7 +677,6 @@ async function setup() {
           document.getElementById(`entry-lane-${lane}`).innerHTML = deselect ? '‎' : `<i class="fa fw fa-${lane}"></i>`;
           document.getElementById(`entry-team-${lane}`).innerText = deselect ? '‎' : `${entry.number} ${entry.univ} ${entry.team}`;
           document.getElementById(`entry-team-time-${lane}`).innerText = deselect ? '‎' : "RECORD 00:00:00.000";
-          document.getElementById(`entry-team-hidden-${lane}`).innerText = deselect ? '‎' : JSON.stringify(entry);
           break;
         }
       }
@@ -665,7 +860,6 @@ function template_monitor_tr(num, value) {
       <td>
         <div id="entry-team-${num}" class="entry-team">${entry ? `${entry.number} ${entry.univ} ${entry.team}` : '‎'}</div>
         <div id="entry-team-time-${num}" class="entry-team-time">${entry ? 'RECORD 00:00:00.000' : '‎'}</div>
-        <div id="entry-team-hidden-${num}" class="entry-team-hidden">${entry ? JSON.stringify(entry) : '‎'}</div>
       </td>
     </tr>`;
 }
