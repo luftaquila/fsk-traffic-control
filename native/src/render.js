@@ -71,7 +71,7 @@ ipcRenderer.on('serial-data', async (evt, data) => {
 
   // handle all protocol messages
   for (let str of rcv) {
-    // back up to the log.json
+    // back up to the fsk-log.json
     await ipcRenderer.invoke('append-file', {
       type: "log",
       data: {
@@ -183,7 +183,7 @@ ipcRenderer.on('serial-data', async (evt, data) => {
             let clock = document.querySelector(`div#container-${mode} .clock`);
             clock.innerText = ms_to_clock(result);
             clock.classList.add('blink');
-            
+
             // save result to the file
             let number = document.querySelector(`div#container-${mode} select.select-team`).value;
             let entry = entries.find(x => x.number === number);
@@ -202,7 +202,7 @@ ipcRenderer.on('serial-data', async (evt, data) => {
                 name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
                 type: "result",
                 data: {
-                  datetime: new Date(),
+                  date: new Date(),
                   lane: "N/A",
                   entry: {
                     number: entry.number,
@@ -264,7 +264,7 @@ ipcRenderer.on('serial-data', async (evt, data) => {
               name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
               type: "result",
               data: {
-                datetime: new Date(),
+                date: new Date(),
                 lane: sensor.lane,
                 entry: {
                   number: entry.number,
@@ -300,7 +300,7 @@ ipcRenderer.on('serial-data', async (evt, data) => {
               name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
               type: "result",
               data: {
-                datetime: new Date(),
+                date: new Date(),
                 lane: "N/A",
                 entry: {
                   number: "N/A",
@@ -431,65 +431,8 @@ async function setup() {
   // set team select options and entry table
   await refresh_entries();
   document.querySelectorAll('select.select-team').forEach(el => el.innerHTML = template_team_select());
-
-  /* entry list table setup ***************************************************/
-  datatable = new DataTable("#entry-table", {
-    columns: [
-      { select: 0, sort: "asc" },
-      { select: 1 },
-      { select: 2 },
-      {
-        select: 3, sortable: false, type: "string", render: (value, td, row, cell) => {
-          return `<span class="delete-entry btn red small" onclick="delete_entry(${row})"><i class="fa fw fa-delete-left"></i>삭제</span>`;
-        }
-      },
-    ],
-    data: {
-      headings: [
-        {
-          text: "엔트리",
-          data: "number"
-        }, {
-          text: "학교",
-          data: "univ"
-        }, {
-          text: "팀",
-          data: "team"
-        }, {
-          text: "삭제",
-          data: "del"
-        }
-      ],
-    },
-    perPage: 100,
-    perPageSelect: [10, 20, 50, 100],
-  });
-
-  makeEditable(datatable, { contextMenu: false });
-
-  datatable.insert(entries.map(x => { x.del = ""; return x }));
-
-  datatable.on("editable.save.cell", async (newValue, oldValue, row, column) => {
-    if (newValue === oldValue) {
-      return;
-    }
-
-    if (controller.running) {
-      let cols = datatable.data.data[row].cells.map(c => c.data);
-      cols[column] = oldValue;
-      datatable.rows.updateRow(row, cols);
-      return notyf.error("계측 중에는 엔트리를 변경할 수 없습니다.");
-    }
-
-    update_entry_table("변경사항이 저장되었습니다.", "변경사항을 저장하지 못했습니다.");
-  });
-
-  /* prevent editor for the delete entry button *******************************/
-  document.getElementById("entry-table").addEventListener("dblclick", e => {
-    if (e.target.classList.contains('delete-entry') || e.target.querySelector(".delete-entry")) {
-      e.stopImmediatePropagation();
-    }
-  });
+  setup_entry();
+  setup_log_viewer();
 
   /* navigation sidebar handler ***********************************************/
   document.querySelectorAll('.nav-mode').forEach(elem => {
@@ -500,6 +443,10 @@ async function setup() {
 
       document.querySelectorAll('.container').forEach(el => el.style.display = 'none');
       document.getElementById(`container-${mode}`).style.display = 'flex';
+
+      if (mode === "log") {
+        update_log_viewer();
+      }
     });
   });
 
@@ -784,8 +731,8 @@ async function setup() {
       return notyf.error("이미 존재하는 엔트리 번호입니다.");
     }
 
-    datatable.rows.add([entry, univ, team, '']);
-    datatable.columns.sort(0, "asc");
+    entry_table.rows.add([entry, univ, team, '']);
+    entry_table.columns.sort(0, "asc");
 
     update_entry_table("엔트리가 추가되었습니다.", "엔트리를 추가하지 못했습니다.");
 
@@ -794,6 +741,173 @@ async function setup() {
     document.getElementById("entry-add-team").value = "";
     document.getElementById("entry-add-number").focus();
   });
+}
+
+let entry_table = undefined;
+
+function setup_entry() {
+  entry_table = new DataTable("#entry-table", {
+    columns: [
+      { select: 0, sort: "asc" },
+      { select: 1 },
+      { select: 2 },
+      {
+        select: 3, sortable: false, type: "string", render: (value, td, row, cell) => {
+          return `<span class="delete-entry btn red small" onclick="delete_entry(${row})"><i class="fa fw fa-delete-left"></i>삭제</span>`;
+        }
+      },
+    ],
+    data: {
+      headings: [
+        {
+          text: "엔트리",
+          data: "number"
+        }, {
+          text: "학교",
+          data: "univ"
+        }, {
+          text: "팀",
+          data: "team"
+        }, {
+          text: "삭제",
+          data: "del"
+        }
+      ],
+    },
+    perPage: 100,
+    perPageSelect: [10, 20, 50, 100],
+  });
+
+  makeEditable(entry_table, { contextMenu: false });
+
+  entry_table.insert(entries.map(x => { x.del = ""; return x }));
+
+  entry_table.on("editable.save.cell", async (newValue, oldValue, row, column) => {
+    if (newValue === oldValue) {
+      return;
+    }
+
+    if (controller.running) {
+      let cols = entry_table.data.data[row].cells.map(c => c.data);
+      cols[column] = oldValue;
+      entry_table.rows.updateRow(row, cols);
+      return notyf.error("계측 중에는 엔트리를 변경할 수 없습니다.");
+    }
+
+    update_entry_table("변경사항이 저장되었습니다.", "변경사항을 저장하지 못했습니다.");
+  });
+
+  /* prevent editor doubleclick event for the delete entry buttons ************/
+  document.getElementById("entry-table").addEventListener("dblclick", e => {
+    if (e.target.classList.contains('delete-entry') || e.target.querySelector(".delete-entry")) {
+      e.stopImmediatePropagation();
+    }
+  });
+
+}
+
+let record_table = undefined;
+let log_table = undefined;
+
+function setup_log_viewer() {
+  record_table = new DataTable("#record-table", {
+    columns: [
+      { select: 0, sort: "asc" },
+      { select: 1 },
+      { select: 2 },
+    ],
+    data: {
+      headings: [
+        {
+          text: "타임스탬프",
+          data: "date",
+        }, {
+          text: "엔트리",
+          data: "number"
+        }, {
+          text: "학교",
+          data: "univ"
+        }, {
+          text: "팀",
+          data: "team"
+        }, {
+          text: "레인",
+          data: "lane"
+        }, {
+          text: "기록",
+          data: "result",
+        },
+      ],
+    },
+    perPage: 100,
+    perPageSelect: [10, 20, 50, 100],
+  });
+
+  log_table = new DataTable("#log-table", {
+    columns: [
+      { select: 0, sort: "asc", type: "date", format: "YYYY-MM-DD HH:mm:ss" },
+      { select: 1 },
+    ],
+    data: {
+      headings: [
+        {
+          text: "타임스탬프",
+          data: "date"
+        }, {
+          text: "데이터",
+          data: "data"
+        }
+      ],
+    },
+    perPage: 100,
+    perPageSelect: [10, 20, 50, 100],
+  });
+
+  document.getElementById('file').addEventListener("change", async e => {
+    record_table.data.data = [];
+    record_table.update(true);
+
+    log_table.data.data = [];
+    log_table.update(true);
+
+    document.getElementById('file-record-box').style.display = "block";
+    document.getElementById('file-log-box').style.display = "none";
+
+    if (e.target.value === "파일 선택") {
+      return;
+    }
+
+    let data = await ipcRenderer.invoke('read-file', e.target.value);
+
+    if (e.target.value === "fsk-log.json") {
+      document.getElementById('file-record-box').style.display = "none";
+      document.getElementById('file-log-box').style.display = "block";
+      log_table.data.data = [];
+      log_table.insert(data.map(x => { return { date: date_to_string(new Date(x.date)), data: x.data } }));
+    } else {
+      document.getElementById('file-record-box').style.display = "block";
+      document.getElementById('file-log-box').style.display = "none";
+      record_table.data.data = [];
+      record_table.insert(data.map(x => { return { date: date_to_string(new Date(x.date)), data: x.data } }));
+    }
+  });
+}
+
+async function update_log_viewer() {
+  try {
+    let files = await ipcRenderer.invoke('get-file-list');
+    let html = "<option selected disabled>파일 선택</option>";
+
+    for (let file of files) {
+      html += `<option value='${file}'>${file}</option>`;
+    }
+
+    let select = document.getElementById('file');
+    select.innerHTML = html;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  } catch (e) {
+    return notyf.error(`파일 목록을 가져오지 못했습니다.<br>${e.message}`);
+  }
 }
 
 setup();
@@ -805,7 +919,7 @@ let entries = undefined;
 
 async function refresh_entries() {
   try {
-    entries = await ipcRenderer.invoke('read-file', "/entry.json");
+    entries = await ipcRenderer.invoke('read-file', "fsk-entry.json");
   } catch (e) {
     if (e.message.includes("ENOENT")) {
       notyf.error(`엔트리 파일을 찾을 수 없습니다.`);
@@ -822,6 +936,10 @@ function ms_to_clock(ms) {
   let seconds = String(Math.floor((ms % (1000 * 60)) / 1000)).padStart(2, 0);
 
   return `${hours}:${minutes}:${seconds}.${String(ms % 1000).padStart(3, 0)}`;
+}
+
+function date_to_string(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, 0)}-${String(date.getDate()).padStart(2, 0)} ${String(date.getHours()).padStart(2, 0)}:${String(date.getMinutes()).padStart(2, 0)}:${String(date.getSeconds()).padStart(2, 0)}`;
 }
 
 function template_team_select(value) {
@@ -874,12 +992,12 @@ function template_monitor_tr(num, value) {
 }
 
 function delete_entry(row) {
-  datatable.rows.remove(row);
+  entry_table.rows.remove(row);
   update_entry_table("엔트리가 삭제되었습니다.", "엔트리를 삭제하지 못했습니다.");
 }
 
 async function update_entry_table(success_msg, error_msg) {
-  let edited = datatable.data.data.map(x => x.cells.map(y => y.text));
+  let edited = entry_table.data.data.map(x => x.cells.map(y => y.text));
   edited = edited.map(entry => { return { number: entry[0], univ: entry[1], team: entry[2] } });
   edited = edited.sort((a, b) => Number(a.number) - Number(b.number));
 

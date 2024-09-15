@@ -123,7 +123,8 @@ input#cnt-lane {
   margin-bottom: 0.3rem;
 }
 
-select.select-team {
+select.select-team,
+select#file {
   width: 18rem;
   height: 1.7rem;
 }
@@ -235,6 +236,16 @@ input.sensor-id {
 #entry-table td {
   padding: 0.5rem 0;
 }
+
+#record-table thead th:first-child,
+#log-table thead th:first-child {
+  width: 15rem!important;
+}
+
+#record-thead thead th:nth-child(1) {
+  width: 8rem!important;
+}
+
 
 /*******************************************************************************
 * animations

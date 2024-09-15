@@ -32,6 +32,10 @@
         <i class="fa fw fa-sliders"></i>
         <span class="tooltip">엔트리 관리</span>
       </li>
+      <li id="log" class="nav-mode">
+        <i class="fa fw fa-file-waveform"></i>
+        <span class="tooltip">경기 기록</span>
+      </li>
       <li style="position: fixed; bottom: 0;"
         onclick="ipcRenderer.send('open-url', 'https://github.com/luftaquila/fsk-traffic-control');">
         <i class="fab fw fa-github"></i>
@@ -375,11 +379,11 @@
       <h1>⚙️ 엔트리 관리</h1>
 
       <div class="mode-description" style="height: unset;">
-        엔트리 목록을 관리합니다. 변경 사항은 모두 exe 파일과 같은 폴더에 있는 entry.json 파일에 저장됩니다.
+        엔트리 목록을 관리합니다. 변경 사항은 모두 exe 파일과 같은 폴더에 있는 fsk-entry.json 파일에 저장됩니다.
 
         <ul>
           <li>
-            엔트리를 수정하려면 셀을 더블클릭하세요.
+            엔트리를 수정하려면 아레 엔트리 목록에서 셀을 더블클릭하세요.
             <ul>
               <li>ENTER 키를 누르면 변경 사항을 저장하고, ESC 키를 누르면 취소합니다.</li>
             </ul>
@@ -403,6 +407,35 @@
         <h2><i class="fa fw fa-book"></i>엔트리 목록</h2>
         <div style="width: 800px;">
           <table id="entry-table"></table>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div id="container-log" class="container" style="display: none;">
+    <div class="configuration" style="width: 100%;">
+      <h1>💾 경기 기록</h1>
+
+      <div class="mode-description" style="height: unset;">
+        저장된 경기 기록과 로그 파일을 열람합니다. 모두 exe 파일과 같은 폴더에 저장되어 있습니다.
+      </div>
+
+      <article>
+        <h2><i class="fa fw fa-folder-open"></i>파일 선택</h2>
+        <div style="width: 800px;">
+          <select id="file"></select>
+        </div>
+      </article>
+
+      <article>
+        <h2><i class="fa fw fa-display"></i>파일 열람</h2>
+
+        <div id="file-record-box">
+          <table id="record-table"></table>
+        </div>
+
+        <div id="file-log-box" style="display: none;">
+          <table id="log-table"></table>
         </div>
       </article>
     </div>

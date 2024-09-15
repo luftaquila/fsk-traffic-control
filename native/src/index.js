@@ -114,11 +114,31 @@ ipcMain.on('serial-request', (event, data) => {
 // handle both dev and production environments
 const base_path = process.env.PORTABLE_EXECUTABLE_DIR ? process.env.PORTABLE_EXECUTABLE_DIR : app.getAppPath();
 
+ipcMain.handle('get-file-list', async (event, data) => {
+  return await (async () => {
+    return new Promise((resolve, reject) => {
+      try {
+        let result = fs.readdirSync(base_path);
+        resolve(result.filter(x => x.toLowerCase().startsWith('fsk') && x !== "fsk-entry.json"));
+      } catch (e) {
+        reject(e);
+      }
+    });
+  })();
+});
+
 ipcMain.handle('read-file', async (event, data) => {
   return await (async () => {
     return new Promise((resolve, reject) => {
       try {
-        resolve(JSON.parse(fs.readFileSync(path.join(base_path, data))));
+        let filedata = fs.readFileSync(path.join(base_path, data));
+
+        if (data === "fsk-entry.json") {
+          resolve(JSON.parse(filedata));
+        } else {
+          filedata = `[${filedata.toString().replace(/^}/gm, '},').slice(0, -2)}]`;
+          resolve(JSON.parse(filedata));
+        }
       } catch (e) {
         reject(e);
       }
@@ -130,7 +150,7 @@ ipcMain.handle('append-file', async (event, data) => {
   return await (async () => {
     return new Promise((resolve, reject) => {
       try {
-        let file = path.join(base_path, data.type === "log" ? '/log.json' : `/${today()}-${data.name}.json`);
+        let file = path.join(base_path, data.type === "log" ? '/fsk-log.json' : `/FSK-${today()}-${data.name}.json`);
         fs.appendFileSync(file, JSON.stringify(data.data, null, 2) + '\n');
         resolve(file);
       } catch (e) {
@@ -144,7 +164,7 @@ ipcMain.handle('write-entry', async (event, data) => {
   return await (async () => {
     return new Promise((resolve, reject) => {
       try {
-        resolve(fs.writeFileSync(path.join(base_path, "/entry.json"), JSON.stringify(data, null, 2)));
+        resolve(fs.writeFileSync(path.join(base_path, "/fsk-entry.json"), JSON.stringify(data, null, 2)));
       } catch (e) {
         reject(e);
       }

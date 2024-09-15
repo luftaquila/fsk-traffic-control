@@ -28,7 +28,7 @@
     "files": [
       "**/*",
       "resources/fonts/**/*",
-      "!entry.json"
+      "!fsk-entry.json"
     ],
     "asarUnpack": [
       "node_modules/notyf/**/*",

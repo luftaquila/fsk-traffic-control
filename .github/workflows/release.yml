@@ -25,6 +25,7 @@ jobs:
           mv build.fsk-traffic-control-windows-x64/*.exe fsk-traffic-control-windows-x64-${{ github.ref_name }}.exe
           mv build.fsk-traffic-control-macos-arm64/*.dmg fsk-traffic-control-macos-arm64-${{ github.ref_name }}.dmg
           mv build.fsk-traffic-control-linux-x64/*.AppImage fsk-traffic-control-linux-x64-${{ github.ref_name }}.AppImage
+          mv native/fsk-entry.json fsk-entry.json
       - uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
@@ -33,13 +34,14 @@ jobs:
             fsk-traffic-control-windows-x64-*.exe
             fsk-traffic-control-macos-arm64-*.dmg
             fsk-traffic-control-linux-x64-*.AppImage
+            fsk-entry.json
           commit: ${{ github.sha }}
           tag: ${{ github.ref_name }}
           body: |
             ## Note
             Use [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) to upload the firmware to the device.  
 
-            Before open the `fsk-traffic-control` application, download [entry.json](https://github.com/luftaquila/fsk-traffic-control/blob/main/native/entry.json) and put it in the same directory with the executable.
+            Before open the `fsk-traffic-control` executable, download `fsk-entry.json` and put it in the same directory with the executable.
 
             In MacOS, run the following command before open the installed `fsk-traffic-control` for the first time. Unless, it will say `"fsk-traffic-control" is damaged and can’t be opened.` because this is not a signed application.
 
