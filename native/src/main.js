@@ -1,3 +1,4 @@
+const { event } = window.__TAURI__;
 const { invoke } = window.__TAURI__.tauri;
 
 let notyf = new Notyf({ ripple: false, duration: 3500 });
@@ -22,7 +23,7 @@ let timestamps = {
 let mode = "record";
 
 let controller = {
-  device: {},
+  device: undefined,
   id: undefined,
   connected: false,
   time_synced: false,
@@ -40,30 +41,18 @@ let active_sensors = {
   lap: undefined,
 };
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
   setup();
-});
-
-/*******************************************************************************
- * serial port open handler                                                    *
- ******************************************************************************/
-ipcRenderer.on('serial-open', (evt, data) => {
-  /*************************************************************************
-   * protocol $HELLO: greetings!
-   *   request : $HELLO
-   *   response: $HI <%03d controller id>
-   ************************************************************************/
-  ipcRenderer.send('serial-request', '$HELLO');
 });
 
 /*******************************************************************************
  * serial data handler                                                         *
  ******************************************************************************/
-ipcRenderer.on('serial-data', async (evt, data) => {
-  let rcv = String.fromCharCode(...data.data);
+event.listen('serial-data', async event => {
+  let rcv = event.payload;
   console.log(rcv);
 
-  rcv = rcv.match(/\$[^$]+/g);
+  rcv = rcv.match(/\$[^$]+!/g).map(x => x.slice(0, -1));
 
   // no protocol message found
   if (!rcv) {
@@ -73,31 +62,37 @@ ipcRenderer.on('serial-data', async (evt, data) => {
   // handle all protocol messages
   for (let str of rcv) {
     // back up to the fsk-log.json
-    await ipcRenderer.invoke('append-file', {
-      type: "log",
-      data: {
+    await invoke('append_file', {
+      name: "fsk-log.json",
+      data: JSON.stringify({
         date: new Date(),
         data: str,
-      }
+      }) + '\n'
     });
+
+    if (str.includes("$ERROR")) {
+      notyf.console.error(`컨트롤러 프로토콜 오류<br>컨트롤러 전원을 껐다 켠 후 다시 시도하세요.`);
+    }
+
     /*************************************************************************
      * protocol $HELLO: greetings!
      *   request : $HELLO
      *   response: $HI <%03d my id>
      ************************************************************************/
-    if (str.includes("$HI")) {
+    else if (str.includes("$HI")) {
       controller.id = Number(str.substr(4, 3));
       controller.connected = true;
+      document.querySelectorAll(`.connect`).forEach(el => el.classList.add('disabled'));
       document.querySelector(`div#container-${mode} .connect`).classList.remove('red');
       document.querySelector(`div#container-${mode} .connect`).classList.add('green');
       document.querySelector(`div#container-${mode} .controller-id`).innerHTML = `<i class="fa fw fa-hashtag"></i>${controller.id}`;
       document.querySelector(`div#container-${mode} .controller-status`).innerText = '연결됨';
       document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
-      document.querySelectorAll('.active-connect').forEach(el => el.classList.remove('disabled'));
+      document.querySelectorAll(`div#container-${mode} .active-connect`).forEach(el => el.classList.remove('disabled'));
       document.querySelectorAll('.traffic').forEach(el => el.style["background-color"] = "grey");
       document.querySelectorAll('.clock').forEach(el => el.innerText = "00:00:00.000");
 
-      notyf.success(`${controller.id}번 컨트롤러 연결 완료 (${controller.device.path})`);
+      notyf.success(`${controller.id}번 컨트롤러 연결 완료 (${controller.device})`);
 
       if (timer.connect) {
         clearTimeout(timer.connect);
@@ -145,8 +140,8 @@ ipcRenderer.on('serial-data', async (evt, data) => {
      *   notify: $REPORT <%03d sensor id> <%d timestamp>
      ************************************************************/
     else if (str.includes("$REPORT")) {
-      const id = Number(str.substr(7, 3));
-      const ts = Number(str.substr(10));
+      const id = Number(str.substr(8, 3));
+      const ts = Number(str.substr(11));
 
       switch (mode) {
         case 'record': {
@@ -199,10 +194,9 @@ ipcRenderer.on('serial-data', async (evt, data) => {
             }
 
             try {
-              let file = await ipcRenderer.invoke('append-file', {
+              let file = await invoke('append_file', {
                 name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
-                type: "result",
-                data: {
+                data: JSON.stringify({
                   date: new Date(),
                   lane: "N/A",
                   entry: {
@@ -214,7 +208,7 @@ ipcRenderer.on('serial-data', async (evt, data) => {
                     ms: result,
                     text: ms_to_clock(result),
                   },
-                },
+                }) + '\n',
               });
               notyf.success(`도착점 센서가 차량을 검출했습니다.<br>${file} 파일에 기록이 저장되었습니다.`);
             } catch (e) {
@@ -261,10 +255,9 @@ ipcRenderer.on('serial-data', async (evt, data) => {
           }
 
           try {
-            let file = await ipcRenderer.invoke('append-file', {
+            let file = await invoke('append_file', {
               name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
-              type: "result",
-              data: {
+              data: JSON.stringify({
                 date: new Date(),
                 lane: sensor.lane,
                 entry: {
@@ -276,7 +269,7 @@ ipcRenderer.on('serial-data', async (evt, data) => {
                   ms: result,
                   text: ms_to_clock(result),
                 },
-              },
+              }) + '\n',
             });
             notyf.success(`${sensor.lane}번 레인 센서가 차량을 검출했습니다.<br>${file} 파일에 기록이 저장되었습니다.`);
           } catch (e) {
@@ -290,17 +283,17 @@ ipcRenderer.on('serial-data', async (evt, data) => {
             return notyf.error(`센서 리포트가 손상되었습니다.<br>${str}`);
           }
 
+          let abs = ts - controller.start;
           let diff = timestamps.lap ? ts - timestamps.lap : ts - controller.start;
           timestamps.lap = ts;
 
-          document.getElementById('lap-log').innerText += `${ms_to_clock(diff)}<br>`;
+          document.getElementById('lap-log').innerHTML += `${ms_to_clock(diff)}<br>`;
 
           // save result to the file
           try {
-            let file = await ipcRenderer.invoke('append-file', {
+            let file = await invoke('append_file', {
               name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
-              type: "result",
-              data: {
+              data: JSON.stringify({
                 date: new Date(),
                 lane: "N/A",
                 entry: {
@@ -309,10 +302,10 @@ ipcRenderer.on('serial-data', async (evt, data) => {
                   team: "N/A",
                 },
                 result: {
-                  ms: result,
-                  text: ms_to_clock(result),
+                  ms: abs,
+                  text: ms_to_clock(abs),
                 },
-              },
+              }) + '\n',
             });
             notyf.success(`센서가 차량을 검출했습니다.<br>${file} 파일에 기록이 저장되었습니다.`);
           } catch (e) {
@@ -396,24 +389,21 @@ ipcRenderer.on('serial-data', async (evt, data) => {
 /*******************************************************************************
  * serial failure handler                                                      *
  ******************************************************************************/
-ipcRenderer.on('serial-error', (evt, data) => {
+event.listen('serial-error', async event => {
+  let data = event.payload;
   controller.running = false;
+  controller.connected = false;
+  controller.device = undefined;
   document.querySelectorAll(`.connect`).forEach(el => el.classList.add('red'));
   document.querySelectorAll(`.connect`).forEach(el => el.classList.remove('disabled', 'green'));
   document.querySelectorAll(`.controller-id`).forEach(el => el.innerHTML = "");
-
-  if (data === "컨트롤러 연결 해제") {
-    document.querySelectorAll(`.controller-status`).forEach(el => el.innerText = "연결 대기");
-    document.querySelectorAll(`.controller-status-color`).forEach(el => el.style.color = 'orange');
-  } else {
-    document.querySelectorAll(`.controller-status`).forEach(el => el.innerText = "오류 발생");
-    document.querySelectorAll(`.controller-status-color`).forEach(el => el.style.color = 'orangered');
-  }
-
+  document.querySelectorAll(`.controller-status`).forEach(el => el.innerText = "오류 발생");
+  document.querySelectorAll(`.controller-status-color`).forEach(el => el.style.color = 'orangered');
   document.querySelectorAll('.disabled').forEach(el => el.classList.remove('disabled'));
   document.querySelectorAll('.active-connect').forEach(el => el.classList.add('disabled'));
   document.querySelectorAll('.active-ready').forEach(el => el.classList.add('disabled'));
 
+  console.error(data);
   notyf.error(data);
 
   if (timer.connect) {
@@ -461,35 +451,12 @@ async function setup() {
   /* controller connection handler ********************************************/
   document.querySelectorAll(".connect").forEach(elem => {
     elem.addEventListener("click", async () => {
-      for (let p of await SerialPort.list()) {
-        switch (navigator.platform) {
-          case 'Win32': {
-            if (p.vendorId === "1999" && p.productId === "0514") {
-              controller.device = p;
-              ipcRenderer.send('serial-target', controller.device.path);
-              document.querySelectorAll(`.connect`).forEach(el => el.classList.add('disabled'));
-
-              timer.connect = setTimeout(() => {
-                notyf.error('컨트롤러 연결 실패 (응답 없음)');
-                document.querySelectorAll(`.connect`).forEach(el => el.classList.remove('disabled'));
-              }, 3000);
-
-              return;
-            }
-          }
-
-          // NOTE: not tested on other platforms
-          default: {
-            if (p.vendorId === 0x1999 && p.productId === 0x0514) {
-              controller.device = p;
-              ipcRenderer.send('serial-target', controller.device.path);
-              return;
-            }
-          }
-        }
+      try {
+        controller.device = await invoke('serial_connect');
+        invoke('serial_request', { data: "$HELLO" });
+      } catch (e) {
+        notyf.error(`컨트롤러 연결에 실패했습니다.<br>${e}`);
       }
-
-      notyf.error(`컨트롤러 연결 실패 (장치 없음)`);
     });
   });
 
@@ -501,7 +468,7 @@ async function setup() {
        *   request : $RESET
        *   response: -
        ************************************************************************/
-      ipcRenderer.send('serial-request', `$RESET`);
+      invoke('serial_request', { data: `$RESET` });
     });
   });
 
@@ -582,7 +549,7 @@ async function setup() {
 
       elem.classList.add('disabled');
       document.querySelectorAll('.sensor-id').forEach(el => el.classList.add('disabled'));
-      ipcRenderer.send('serial-request', `$SENSOR ${cmd}`);
+      invoke('serial_request', { data: `$SENSOR ${cmd}` });
     });
   });
 
@@ -690,7 +657,7 @@ async function setup() {
        *   request : $GREEN
        *   response: $START <start timestamp>
        ************************************************************************/
-      ipcRenderer.send('serial-request', `$GREEN`);
+      invoke('serial_request', { data: `$GREEN` });
     });
   });
 
@@ -702,7 +669,7 @@ async function setup() {
        *   request : $STOP
        *   response: $OK-RED
        ************************************************************************/
-      ipcRenderer.send('serial-request', `$RED`);
+      invoke('serial_request', { data: `$RED` });
     });
   });
 
@@ -714,7 +681,7 @@ async function setup() {
        *   request : $OFF
        *   response: $OK-OFF
        ************************************************************************/
-      ipcRenderer.send('serial-request', `$OFF`);
+      invoke('serial_request', { data: `$OFF` });
     });
   });
 
@@ -747,7 +714,7 @@ async function setup() {
 let entry_table = undefined;
 
 function setup_entry() {
-  entry_table = new DataTable("#entry-table", {
+  entry_table = new simpleDatatables.DataTable("#entry-table", {
     columns: [
       { select: 0, sort: "asc" },
       { select: 1 },
@@ -779,7 +746,7 @@ function setup_entry() {
     perPageSelect: [10, 20, 50, 100],
   });
 
-  makeEditable(entry_table, { contextMenu: false });
+  simpleDatatables.makeEditable(entry_table, { contextMenu: false });
 
   entry_table.insert(entries.map(x => { x.del = ""; return x }));
 
@@ -811,7 +778,7 @@ let record_table = undefined;
 let log_table = undefined;
 
 function setup_log_viewer() {
-  record_table = new DataTable("#record-table", {
+  record_table = new simpleDatatables.DataTable("#record-table", {
     columns: [
       { select: 0, sort: "asc" },
       { select: 1 },
@@ -844,7 +811,7 @@ function setup_log_viewer() {
     perPageSelect: [10, 20, 50, 100],
   });
 
-  log_table = new DataTable("#log-table", {
+  log_table = new simpleDatatables.DataTable("#log-table", {
     columns: [
       { select: 0, sort: "asc", type: "date", format: "YYYY-MM-DD HH:mm:ss" },
       { select: 1 },
@@ -864,7 +831,7 @@ function setup_log_viewer() {
     perPageSelect: [10, 20, 50, 100],
   });
 
-  document.getElementById('file').addEventListener("change", async e => {
+  document.getElementById('file').addEventListener("change", async event => {
     record_table.data.data = [];
     record_table.update(true);
 
@@ -874,30 +841,38 @@ function setup_log_viewer() {
     document.getElementById('file-record-box').style.display = "block";
     document.getElementById('file-log-box').style.display = "none";
 
-    if (e.target.value === "파일 선택") {
+    if (event.target.value === "파일 선택") {
       return;
     }
 
-    let data = await ipcRenderer.invoke('read-file', e.target.value);
+    try {
+      let data = await invoke('read_file', event.target.value);
 
-    if (e.target.value === "fsk-log.json") {
-      document.getElementById('file-record-box').style.display = "none";
-      document.getElementById('file-log-box').style.display = "block";
-      log_table.data.data = [];
-      log_table.insert(data.map(x => { return { date: date_to_string(new Date(x.date)), data: x.data } }));
-    } else {
-      document.getElementById('file-record-box').style.display = "block";
-      document.getElementById('file-log-box').style.display = "none";
-      record_table.data.data = [];
-      record_table.insert(data.map(x => { return { date: date_to_string(new Date(x.date)), data: x.data } }));
+      if (event.target.value === "fsk-log.json") {
+        data = JSON.parse(data);
+        document.getElementById('file-record-box').style.display = "none";
+        document.getElementById('file-log-box').style.display = "block";
+        log_table.data.data = [];
+        log_table.insert(data.map(x => { return { date: date_to_string(new Date(x.date)), data: x.data } }));
+      } else {
+        data = JSON.parse(`[${data.toString().replace(/^}/gm, '},').slice(0, -2)}]`);
+        document.getElementById('file-record-box').style.display = "block";
+        document.getElementById('file-log-box').style.display = "none";
+        record_table.data.data = [];
+        record_table.insert(data.map(x => { return { date: date_to_string(new Date(x.date)), data: x.data } }));
+      }
+    } catch (e) {
+      notyf.error(`파일을 읽어오지 못했습니다.<br>${e}`);
     }
   });
 }
 
 async function update_log_viewer() {
   try {
-    let files = await ipcRenderer.invoke('get-file-list');
+    let files = await invoke('get_file_list');
     let html = "<option selected disabled>파일 선택</option>";
+
+    console.log(files)
 
     for (let file of files) {
       html += `<option value='${file}'>${file}</option>`;
@@ -907,7 +882,7 @@ async function update_log_viewer() {
     select.innerHTML = html;
     select.dispatchEvent(new Event("change", { bubbles: true }));
   } catch (e) {
-    return notyf.error(`파일 목록을 가져오지 못했습니다.<br>${e.message}`);
+    return notyf.error(`파일 목록을 가져오지 못했습니다.<br>${e}`);
   }
 }
 
@@ -918,12 +893,12 @@ let entries = undefined;
 
 async function refresh_entries() {
   try {
-    entries = await ipcRenderer.invoke('read-file', "fsk-entry.json");
+    entries = JSON.parse(await invoke('read_file', { fileName: "fsk-entry.json" }));
   } catch (e) {
-    if (e.message.includes("ENOENT")) {
+    if (e.toString().includes("os error 2")) {
       notyf.error(`엔트리 파일을 찾을 수 없습니다.`);
     } else {
-      notyf.error(`엔트리 파일이 손상되었습니다.<br>${e.message}`);
+      notyf.error(`엔트리 파일이 손상되었습니다.<br>${e.toString()}`);
     }
     document.querySelectorAll(`nav, div.container`).forEach(el => el.classList.add("disabled"));
   }
@@ -1001,7 +976,7 @@ async function update_entry_table(success_msg, error_msg) {
   edited = edited.sort((a, b) => Number(a.number) - Number(b.number));
 
   try {
-    await ipcRenderer.invoke('write-entry', edited);
+    await invoke('write_entry', edited);
     await refresh_entries();
 
     document.querySelectorAll('select.select-team').forEach(el => {

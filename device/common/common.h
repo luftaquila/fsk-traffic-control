@@ -18,12 +18,12 @@
 #include "usbd_cdc_if.h"
 
 #define MAX_LEN_USB_CMD (10)
-#define USB_Transmit(buf, len)             \
-  {                                        \
-    uint8_t usb_ret;                       \
-    do {                                   \
-      usb_ret = CDC_Transmit_FS(buf, len); \
-    } while (usb_ret == USBD_BUSY);        \
+#define USB_Transmit(buf)                                                      \
+  {                                                                            \
+    uint8_t usb_ret;                                                           \
+    do {                                                                       \
+      usb_ret = CDC_Transmit_FS((uint8_t *)buf, strlen((const char *)buf));    \
+    } while (usb_ret == USBD_BUSY);                                            \
   }
 #define USB_Command(CMD) \
   (strncmp((const char *)UserRxBufferFS, usb_cmd[CMD], strlen(usb_cmd[CMD])) == 0)

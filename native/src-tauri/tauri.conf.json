@@ -20,7 +20,9 @@
       {
         "title": "fsk-traffic-control",
         "width": 1800,
-        "height": 1100 
+        "height": 1100,
+        "x": 0,
+        "y": 0
       }
     ],
     "security": {

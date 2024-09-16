@@ -242,7 +242,7 @@ int main(void)
             // start LSNTP server
             mode = MODE_LSNTP;
             LoRa_startReceiving(&rf);
-            USB_Transmit((uint8_t *)"$LSNTP", strlen("$LSNTP"));
+            USB_Transmit("$LSNTP!");
           }
 
           /*************************************************************************
@@ -251,8 +251,8 @@ int main(void)
            *   response: $HI <%03d my id>
            ************************************************************************/
           else if (USB_Command(CMD_HELLO)) {
-            sprintf((char *)UserTxBufferFS, "$HI %03u", id);
-            USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
+            sprintf((char *)UserTxBufferFS, "$HI %03u!", id);
+            USB_Transmit(UserTxBufferFS);
           }
 
           /*************************************************************************
@@ -266,7 +266,7 @@ int main(void)
 
           // unknown command
           else {
-            USB_Transmit((uint8_t *)"$ERROR", strlen("$ERROR"));
+            USB_Transmit("$ERROR!");
           }
 
           usb_rcv_flag = false;
@@ -377,8 +377,8 @@ int main(void)
                  * protocol $READY: notify sensor ready
                  *   notify: $READY <%03d sensor id> <%d sensor offset>
                  ************************************************************/
-                sprintf((char *)UserTxBufferFS, "$READY %03u %ld", req->sender, ((lora_ready_t *)req)->offset);
-                USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
+                sprintf((char *)UserTxBufferFS, "$READY %03u %ld!", req->sender, ((lora_ready_t *)req)->offset);
+                USB_Transmit(UserTxBufferFS);
 
                 break;
               }
@@ -394,7 +394,7 @@ int main(void)
         // all registered sensors are ready
         if (cnt_sensor_ready == cnt_sensor) {
           mode = MODE_OPERATION;
-          USB_Transmit((uint8_t *)"$READY-ALL", strlen("$READY-ALL"));
+          USB_Transmit("$READY-ALL!");
         }
 
         if (usb_rcv_flag) {
@@ -409,7 +409,7 @@ int main(void)
 
           // unknown command
           else {
-            USB_Transmit((uint8_t *)"$ERROR", strlen("$ERROR"));
+            USB_Transmit("$ERROR!");
           }
 
           usb_rcv_flag = false;
@@ -465,8 +465,8 @@ int main(void)
              * protocol $REPORT: notify sensor report
              *   notify: $REPORT <%03d sensor id> <%d timestamp>
              ************************************************************/
-            sprintf((char *)UserTxBufferFS, "$REPORT %03u %lu", req->sender, ((lora_sensor_report_t *)req)->timestamp);
-            USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
+            sprintf((char *)UserTxBufferFS, "$REPORT %03u %lu!", req->sender, ((lora_sensor_report_t *)req)->timestamp);
+            USB_Transmit(UserTxBufferFS)
 
             pos += size;
           } /* while buffer */
@@ -487,8 +487,8 @@ int main(void)
 
             uint32_t start_time = HAL_GetTick();
 
-            sprintf((char *)UserTxBufferFS, "$START %lu", start_time);
-            USB_Transmit(UserTxBufferFS, strlen((const char *)UserTxBufferFS));
+            sprintf((char *)UserTxBufferFS, "$START %lu!", start_time);
+            USB_Transmit(UserTxBufferFS);
           }
 
           /*************************************************************************
@@ -500,7 +500,7 @@ int main(void)
             RED(true);
             GREEN(false);
 
-            USB_Transmit((uint8_t *)"$OK-RED", strlen("$OK-RED"));
+            USB_Transmit("$OK-RED!");
           }
 
           /*************************************************************************
@@ -512,7 +512,7 @@ int main(void)
             RED(false);
             GREEN(false);
 
-            USB_Transmit((uint8_t *)"$OK-OFF", strlen("$OK-OFF"));
+            USB_Transmit("$OK-OFF!");
           }
 
           /*************************************************************************
@@ -526,7 +526,7 @@ int main(void)
 
           // unknown command
           else {
-            USB_Transmit((uint8_t *)"$ERROR", strlen("$ERROR"));
+            USB_Transmit("$ERROR!");
           }
 
           usb_rcv_flag = false;
