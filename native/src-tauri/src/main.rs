@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use chrono::prelude::*;
 use serialport::{SerialPort, SerialPortType};
 use std::fs::{self, OpenOptions};
 use std::io::Read;
@@ -56,9 +57,9 @@ fn serial_request(
     window: Window,
     data: String,
 ) -> Result<String, String> {
-    println!("try lock");
+    println!("{} sender: try lock", Local::now());
     let mut shared_port = state.port.lock().unwrap();
-    println!("got lock");
+    println!("{} sender: got lock", Local::now());
 
     if let Some(ref mut port) = *shared_port {
         match port.write(data.as_bytes()) {
@@ -87,9 +88,9 @@ fn serial_listen(app_handle: tauri::AppHandle, port: Arc<Mutex<Option<Box<dyn Se
         let mut buffer = Vec::new();
         loop {
             {
-                println!("before lock");
+                println!("{} receiver: before lock", Local::now());
                 let mut shared_port = port.lock().unwrap();
-                println!("after lock");
+                println!("{} receiver: after lock", Local::now());
 
                 if let Some(ref mut port) = *shared_port {
                     let mut buf: [u8; 1024] = [0; 1024];
@@ -119,9 +120,9 @@ fn serial_listen(app_handle: tauri::AppHandle, port: Arc<Mutex<Option<Box<dyn Se
                 }
             }
 
-            println!("before sleep");
+            println!("{} receiver: before sleep", Local::now());
             thread::sleep(Duration::from_millis(100));
-            println!("after sleep");
+            println!("{} receiver: after sleep", Local::now());
         }
     });
 }
@@ -161,7 +162,6 @@ async fn append_file(name: String, data: String) -> Result<String, String> {
     let file_name = if name == "fsk-log.json" {
         "fsk-log.json".to_string()
     } else {
-        use chrono::prelude::*;
         format!(
             "FSK-{}-{}.json",
             Local::now().format("%Y-%m-%d").to_string(),
