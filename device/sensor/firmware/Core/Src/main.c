@@ -365,6 +365,8 @@ int main(void)
   report_packet.header.receiver = controller_id;
 
   while (1) {
+    HAL_Delay(1); // don't know why, but needed
+
     if (exti_sensor) {
       report_packet.timestamp = exti_sensor_timestamp + lsntp_offset;
 
