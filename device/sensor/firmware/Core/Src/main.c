@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "LoRa.h"
 
@@ -164,6 +165,15 @@ int main(void)
     Error_Handler();
   }
 
+  /***** read first 1KB of the SRAM to generate random seed *****/
+  uint32_t sum = 0;
+
+  for (uint32_t *i = (uint32_t *)0x20000000; i < (uint32_t *)0x20000400; i++) {
+    sum += *i;
+  }
+
+  srand(sum);
+
   /*****************************************************************************
    * FSK-TC SENSOR workflow                                                    *
    *   1. LSNTP time sync x5                                                   *
@@ -180,7 +190,7 @@ int main(void)
   lora_lsntp_req_t packet;
   packet.header.protocol = LORA_LSNTP_REQ;
   packet.header.sender = id;
-  packet.header.receiver = 0;
+  packet.header.receiver = LORA_ID_BROADCAST;
 
   uint8_t seq = 0;
   int32_t success = 0;
@@ -192,8 +202,7 @@ int main(void)
   while (true) {
     // too many failures
     if (seq > 15) {
-      DEBUG_MSG("too many lsntp retry\n");
-      Error_Handler();
+      seq = 0;
     }
 
     if (retransmit) {
@@ -222,6 +231,7 @@ int main(void)
     // timeout; make new request
     if (retransmit) {
       DEBUG_MSG("  timeout!\n");
+      HAL_Delay(300 + (rand() & 0xFF));
       continue;
     }
 
@@ -240,7 +250,7 @@ int main(void)
     // checksum or receiver check failure
     int32_t ret = lora_verify(id, &pkt->header, sizeof(lora_lsntp_res_t));
 
-    if (ret != LORA_STATUS_OK) {
+    if (ret != LORA_STATUS_OK || pkt->header.receiver == LORA_ID_BROADCAST) {
       DEBUG_MSG("  packet verify failure; result: %ld\n", ret);
       continue;
     }
@@ -314,6 +324,7 @@ int main(void)
 
     if (retransmit) {
       DEBUG_MSG("  timeout!\n");
+      HAL_Delay(300 + (rand() & 0xFF));
       continue;
     }
 
@@ -332,7 +343,7 @@ int main(void)
     // checksum or receiver check failure
     int32_t ret = lora_verify(id, &pkt->header, sizeof(lora_ack_t));
 
-    if (ret != LORA_STATUS_OK) {
+    if (ret != LORA_STATUS_OK || pkt->header.receiver == LORA_ID_BROADCAST) {
       DEBUG_MSG("  packet verify failure; result: %ld\n", ret);
       continue;
     }
@@ -401,6 +412,7 @@ int main(void)
 
         if (retransmit) {
           DEBUG_MSG("  timeout!\n");
+          HAL_Delay(300 + (rand() & 0xFF));
           continue;
         }
 
@@ -419,7 +431,7 @@ int main(void)
         // checksum or receiver check failure
         int32_t ret = lora_verify(id, &pkt->header, sizeof(lora_ack_t));
 
-        if (ret != LORA_STATUS_OK) {
+        if (ret != LORA_STATUS_OK || pkt->header.receiver == LORA_ID_BROADCAST) {
           DEBUG_MSG("  packet verify failure; result: %ld\n", ret);
           continue;
         }
@@ -438,11 +450,9 @@ int main(void)
     }
 
     // somebody else sent something
-    else {
-      if (exti_rf) {
-        exti_rf = false;
-        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-      }
+    else if (exti_rf) {
+      exti_rf = false;
+      HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
     }
     /* USER CODE END WHILE */
 
