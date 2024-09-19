@@ -436,6 +436,14 @@ int main(void)
 
       exti_sensor = false;
     }
+
+    // somebody else sent something
+    else {
+      if (exti_rf) {
+        exti_rf = false;
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+      }
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
