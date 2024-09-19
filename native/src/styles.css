@@ -212,12 +212,12 @@ input.sensor-id {
 
 #lap-log {
   margin: auto;
-  width: 20rem;
-  max-height: 40rem;
+  width: 35rem;
+  max-height: 44rem;
   overflow-y: scroll;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-family: "Departure Mono";
-  line-height: 2rem;
+  line-height: 2.2rem;
 }
 
 #container-settings .mode-description {

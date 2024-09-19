@@ -28,6 +28,7 @@ let controller = {
   connected: false,
   time_synced: false,
   start: undefined,
+  start_ts: undefined,
   running: false,
   light: false, // false, green, red
 };
@@ -41,6 +42,9 @@ let active_sensors = {
   lap: undefined,
 };
 
+let lap_cnt = 0;
+let record_delay = undefined;
+
 window.addEventListener("DOMContentLoaded", async () => {
   setup();
 });
@@ -50,7 +54,7 @@ window.addEventListener("DOMContentLoaded", async () => {
  ******************************************************************************/
 event.listen('serial-data', async event => {
   let rcv = event.payload;
-  console.log(rcv);
+  console.log(`${Number(new Date())} ${rcv}`);
 
   rcv = rcv.match(/\$[^$]+!/g).map(x => x.slice(0, -1));
 
@@ -67,7 +71,7 @@ event.listen('serial-data', async event => {
       data: JSON.stringify({
         date: new Date(),
         data: str,
-      }) + '\n'
+      }, null, 2) + '\n'
     });
 
     if (str.includes("$ERROR")) {
@@ -143,21 +147,30 @@ event.listen('serial-data', async event => {
       const id = Number(str.substr(8, 3));
       const ts = Number(str.substr(11));
 
+      if (!controller.running) {
+        return;
+      }
+
       switch (mode) {
         case 'record': {
+          controller.start = new Date();
+
           if (id === active_sensors.record.start.id) {
             if (timestamps.record.start) {
               return notyf.error(`출발점 센서가 알 수 없는 물체를 검출했습니다.<br>센서 리포트를 무시합니다.<br>${str}`);
             }
 
             timestamps.record.start = ts;
+            record_delay = timestamps.record.start - controller.start_ts;
+
             timer.clock = setInterval(() => {
               document.querySelector(`div#container-${mode} .clock`).innerText = ms_to_clock(new Date() - controller.start);
             }, 7);
 
             let clock = document.querySelector(`div#container-${mode} .entry-team-time`);
-            clock.innerText = '+' + ms_to_clock(controller.start - timestamps.record.start);
+            clock.innerText = '+' + ms_to_clock(record_delay);
             clock.classList.add('blink');
+            setTimeout(() => { clock.classList.remove('blink'); }, 3000);
 
             notyf.success("출발점 센서가 차량 출발을 검출했습니다.");
           }
@@ -179,6 +192,7 @@ event.listen('serial-data', async event => {
             let clock = document.querySelector(`div#container-${mode} .clock`);
             clock.innerText = ms_to_clock(result);
             clock.classList.add('blink');
+            setTimeout(() => { clock.classList.remove('blink'); }, 3000);
 
             // save result to the file
             let number = document.querySelector(`div#container-${mode} select.select-team`).value;
@@ -187,7 +201,7 @@ event.listen('serial-data', async event => {
             if (!entry) {
               notyf.error("주행한 팀을 엔트리에서 찾을 수 없습니다.<br>파일에 UNKNOWN으로 기록됩니다.");
               entry = {
-                number: number,
+                number: "UNKNOWN",
                 univ: "UNKNOWN",
                 team: "UNKNOWN",
               };
@@ -197,7 +211,8 @@ event.listen('serial-data', async event => {
               let file = await invoke('append_file', {
                 name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
                 data: JSON.stringify({
-                  date: new Date(),
+                  time: new Date(),
+                  type: "record",
                   lane: "N/A",
                   entry: {
                     number: entry.number,
@@ -206,9 +221,9 @@ event.listen('serial-data', async event => {
                   },
                   result: {
                     ms: result,
-                    text: ms_to_clock(result),
+                    delay: record_delay,
                   },
-                }) + '\n',
+                }, null, 2) + '\n',
               });
               notyf.success(`도착점 센서가 차량을 검출했습니다.<br>${file} 파일에 기록이 저장되었습니다.`);
             } catch (e) {
@@ -235,11 +250,12 @@ event.listen('serial-data', async event => {
           }
 
           timestamps.competitive[sensor.lane] = ts;
-          let result = timestamps.competitive[sensor.lane] - controller.start;
+          let result = timestamps.competitive[sensor.lane] - controller.start_ts;
 
           let clock = document.getElementById(`entry-team-time-${sensor.lane}`);
-          clock.innerText = ms_to_clock(result);
+          clock.innerText = `RECORD ${ms_to_clock(result)}`;
           clock.classList.add('blink');
+          setTimeout(() => { clock.classList.remove('blink'); }, 3000);
 
           // save result to the file
           let number = document.getElementById(`team-lane-${sensor.lane}`).value;
@@ -248,7 +264,7 @@ event.listen('serial-data', async event => {
           if (!entry) {
             notyf.error("주행한 팀을 엔트리에서 찾을 수 없습니다.<br>파일에 UNKNOWN으로 기록됩니다.");
             entry = {
-              number: number,
+              number: "UNKNOWN",
               univ: "UNKNOWN",
               team: "UNKNOWN",
             };
@@ -258,7 +274,8 @@ event.listen('serial-data', async event => {
             let file = await invoke('append_file', {
               name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
               data: JSON.stringify({
-                date: new Date(),
+                time: new Date(),
+                type: "competitive",
                 lane: sensor.lane,
                 entry: {
                   number: entry.number,
@@ -267,9 +284,8 @@ event.listen('serial-data', async event => {
                 },
                 result: {
                   ms: result,
-                  text: ms_to_clock(result),
                 },
-              }) + '\n',
+              }, null, 2) + '\n',
             });
             notyf.success(`${sensor.lane}번 레인 센서가 차량을 검출했습니다.<br>${file} 파일에 기록이 저장되었습니다.`);
           } catch (e) {
@@ -283,18 +299,20 @@ event.listen('serial-data', async event => {
             return notyf.error(`센서 리포트가 손상되었습니다.<br>${str}`);
           }
 
-          let abs = ts - controller.start;
-          let diff = timestamps.lap ? ts - timestamps.lap : ts - controller.start;
+          let abs = ts - controller.start_ts;
+          let diff = timestamps.lap ? ts - timestamps.lap : ts - controller.start_ts;
           timestamps.lap = ts;
+          lap_cnt++;
 
-          document.getElementById('lap-log').innerHTML += `${ms_to_clock(diff)}<br>`;
+          document.getElementById('lap-log').innerHTML += `${String(lap_cnt).padStart(3, ' ').replace(/ /g, '&nbsp')}&emsp;${ms_to_clock(abs)} <span style="font-size: 1.2rem">(+${ms_to_clock(diff)})</span><br>`;
 
           // save result to the file
           try {
             let file = await invoke('append_file', {
               name: document.querySelector(`div#container-${mode} .event-name`).value.trim(),
               data: JSON.stringify({
-                date: new Date(),
+                time: new Date(),
+                type: "lap",
                 lane: "N/A",
                 entry: {
                   number: "N/A",
@@ -303,9 +321,10 @@ event.listen('serial-data', async event => {
                 },
                 result: {
                   ms: abs,
-                  text: ms_to_clock(abs),
+                  diff: diff,
+                  rank: lap_cnt,
                 },
-              }) + '\n',
+              }, null, 2) + '\n',
             });
             notyf.success(`센서가 차량을 검출했습니다.<br>${file} 파일에 기록이 저장되었습니다.`);
           } catch (e) {
@@ -323,15 +342,21 @@ event.listen('serial-data', async event => {
      ************************************************************************/
     else if (str.includes("$START")) {
       controller.start = new Date();
+      controller.start_ts = Number(str.substr(7));
+
       controller.running = true;
       controller.light = "green";
-      document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = 'green';
+
+      document.querySelector('nav').classList.add('disabled');
       document.querySelector(`div#container-${mode} .reset`).classList.add('disabled');
       document.querySelector(`div#container-${mode} .traffic-green`).classList.add('disabled');
+      document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.add('disabled'));
+      document.querySelectorAll(`div#container-${mode} button.deselect-team`).forEach(el => el.classList.add('disabled'));
+
+      document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = 'green';
       document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 중...';
       document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'purple';
       document.querySelector(`div#container-${mode} .event-name`).classList.add('disabled');
-      document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.add('disabled'));
 
       if (mode === 'competitive' || mode === 'lap') {
         timer.clock = setInterval(() => {
@@ -354,14 +379,42 @@ event.listen('serial-data', async event => {
      ************************************************************************/
     else if (str.includes("$OK-RED") || str.includes("$OK-OFF")) {
       controller.running = false;
-      document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = str.includes("$OK-RED") ? "rgb(230, 20, 20)" : "grey";
+      controller.light = str.includes("$OK-RED") ? "red" : false;
+
+      if (timer.clock) {
+        clearInterval(timer.clock);
+      }
+
+      document.querySelector('nav').classList.remove('disabled');
       document.querySelector(`div#container-${mode} .reset`).classList.remove('disabled');
       document.querySelector(`div#container-${mode} .traffic-green`).classList.remove('disabled');
-      document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 대기';
-      document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
       document.querySelector(`div#container-${mode} .event-name`).classList.remove('disabled');
       document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.classList.remove('disabled'));
-      document.querySelectorAll(`div#container-${mode} .clock.blink`).forEach(el => el.classList.remove('blink'));
+      document.querySelectorAll(`div#container-${mode} button.deselect-team`).forEach(el => el.classList.remove('disabled'));
+
+      document.querySelector(`div#container-${mode} .traffic`).style["background-color"] = str.includes("$OK-RED") ? "rgb(230, 20, 20)" : "grey";
+      document.querySelector(`div#container-${mode} .controller-status`).innerText = '계측 대기';
+      document.querySelector(`div#container-${mode} .controller-status-color`).style.color = 'green';
+      document.querySelectorAll(`div#container-${mode} .blink`).forEach(el => el.classList.remove('blink'));
+
+      if (str.includes("$OK-OFF")) {
+        document.querySelectorAll('.clock').forEach(el => el.innerText = "00:00:00.000");
+
+        switch (mode) {
+          case 'record':
+            document.querySelector(`div#container-${mode} select.select-team`).dispatchEvent(new Event("change", { bubbles: true }));
+            break;
+
+          case 'competitive':
+            document.querySelectorAll(`div#container-${mode} select.select-team`).forEach(el => el.dispatchEvent(new Event("change", { bubbles: true })));
+            break;
+
+          case 'lap':
+            document.getElementById('lap-log').innerHTML = "";
+            lap_cnt = 0;
+            break;
+        }
+      }
 
       // reset all timestamps
       timestamps = {
@@ -376,12 +429,6 @@ event.listen('serial-data', async event => {
       if (controller.light === "green") {
         notyf.success('계측 종료');
       }
-
-      if (timer.clock) {
-        clearInterval(timer.clock);
-      }
-
-      controller.light = str.includes("$OK-RED") ? "red" : false;
     }
   }
 });
@@ -394,6 +441,7 @@ event.listen('serial-error', async event => {
   controller.running = false;
   controller.connected = false;
   controller.device = undefined;
+
   document.querySelectorAll(`.connect`).forEach(el => el.classList.add('red'));
   document.querySelectorAll(`.connect`).forEach(el => el.classList.remove('disabled', 'green'));
   document.querySelectorAll(`.controller-id`).forEach(el => el.innerHTML = "");
@@ -402,6 +450,9 @@ event.listen('serial-error', async event => {
   document.querySelectorAll('.disabled').forEach(el => el.classList.remove('disabled'));
   document.querySelectorAll('.active-connect').forEach(el => el.classList.add('disabled'));
   document.querySelectorAll('.active-ready').forEach(el => el.classList.add('disabled'));
+
+  document.querySelectorAll('.sensor-offset').forEach(el => el.innerHTML = "");
+  document.querySelectorAll('.clock').forEach(el => el.innerHTML = "00:00:00.000");
 
   console.error(data);
   notyf.error(data);
@@ -933,7 +984,7 @@ function template_sensor_tr(num, value) {
         <i class="fa fw fa-${num}"></i>
       </td>
       <td><input type="number" id="sensor-id-lane-${num}" class="sensor-id" placeholder="센서 ID" value=${value}></td>
-      <td id="sensor-offset-lane-${num}" style="padding-left: 1rem;"></td>
+      <td id="sensor-offset-lane-${num}" class="sensor-offset" style="padding-left: 1rem;"></td>
     </tr>`;
 }
 
