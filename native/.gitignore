@@ -1,4 +1,5 @@
-fsk-log.json
+fsk-*.json
+
 # Logs
 logs
 *.log
