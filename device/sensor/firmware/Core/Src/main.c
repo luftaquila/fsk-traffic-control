@@ -431,13 +431,18 @@ int main(void)
         // checksum or receiver check failure
         int32_t ret = lora_verify(id, &pkt->header, sizeof(lora_ack_t));
 
-        if (ret != LORA_STATUS_OK || pkt->header.receiver == LORA_ID_BROADCAST) {
+        if (ret != LORA_STATUS_OK) {
           DEBUG_MSG("  packet verify failure; result: %ld\n", ret);
+          HAL_Delay(rand() & 0xFF);
           continue;
         }
 
         // wrong packet
-        if (pkt->header.protocol != LORA_ACK || pkt->header.sequence != report_packet.header.sequence) {
+        if (
+          pkt->header.receiver == LORA_ID_BROADCAST ||
+          pkt->header.protocol != LORA_ACK ||
+          pkt->header.sequence != report_packet.header.sequence
+        ) {
           DEBUG_MSG("  packet mismatch; received: %u(%u), expected: %u(%u)\n",
                     pkt->header.protocol, pkt->header.sequence, LORA_ACK, report_packet.header.sequence);
           continue;
