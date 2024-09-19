@@ -185,6 +185,8 @@ int main(void)
    * 1. do LSNTP 5 times and set offset as average
    ****************************************************************************/
   LoRa_startReceiving(&rf);
+
+LSNTP:
   mode = MODE_LSNTP;
 
   lora_lsntp_req_t packet;
@@ -278,8 +280,18 @@ int main(void)
     }
   }
 
-  // TODO: check standard distribution and remove anomaly
   lsntp_offset /= LSNTP_ITER_COUNT;
+
+  for (int i = 0; i < LSNTP_ITER_COUNT; i++) {
+    // acceptable error: 10ms
+    if (
+      ((offset[i] > lsntp_offset) && (offset[i] - lsntp_offset > 10)) ||
+      ((offset[i] < lsntp_offset) && (lsntp_offset - offset[i] > 10))
+    ) {
+      goto LSNTP;
+    }
+  }
+
   DEBUG_MSG("done LSNTP. controller: %u, offset: %ld\n", controller_id, lsntp_offset);
 
 
