@@ -176,8 +176,7 @@ async fn append_file(name: String, data: String) -> Result<String, String> {
         .open(&file_path)
     {
         Ok(mut file) => {
-            let json_data = serde_json::to_string_pretty(&data).unwrap();
-            if let Err(e) = std::io::Write::write_all(&mut file, json_data.as_bytes()) {
+            if let Err(e) = std::io::Write::write_all(&mut file, data.as_bytes()) {
                 return Err(format!("Failed to append to file: {}", e));
             }
             Ok(file_path.to_string_lossy().to_string())
