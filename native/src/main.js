@@ -853,8 +853,14 @@ function setup_log_viewer() {
           text: "레인",
           data: "lane"
         }, {
+          text: "경기",
+          data: "type"
+        }, {
           text: "기록",
           data: "result",
+        }, {
+          text: "비고",
+          data: "note",
         },
       ],
     },
@@ -897,10 +903,10 @@ function setup_log_viewer() {
     }
 
     try {
-      let data = await invoke('read_file', event.target.value);
+      let data = await invoke('read_file', { name: event.target.value });
 
       if (event.target.value === "fsk-log.json") {
-        data = JSON.parse(data);
+        data = JSON.parse(`[${data.toString().replace(/^}/gm, '},').slice(0, -2)}]`);
         document.getElementById('file-record-box').style.display = "none";
         document.getElementById('file-log-box').style.display = "block";
         log_table.data.data = [];
@@ -910,7 +916,43 @@ function setup_log_viewer() {
         document.getElementById('file-record-box').style.display = "block";
         document.getElementById('file-log-box').style.display = "none";
         record_table.data.data = [];
-        record_table.insert(data.map(x => { return { date: date_to_string(new Date(x.date)), data: x.data } }));
+        record_table.insert(data.map(x => {
+          let name, note;
+
+          switch (x.type) {
+            case "record":
+              name = "기록 측정";
+              note = `${x.result.delay} ms delay`;
+              break;
+
+            case "competitive":
+              name = "동시 경주";
+              note = '-';
+              break;
+
+            case "lap":
+              name = "랩 타임 측정";
+              note = `Rank ${x.result.rank} (+${x.result.diff} ms)`;
+              break;
+
+
+            default:
+              name = "알 수 없음";
+              note = '-';
+              break;
+          }
+
+          return {
+            date: date_to_string(new Date(x.time)),
+            number: x.entry.number,
+            univ: x.entry.univ,
+            team: x.entry.team,
+            lane: x.lane,
+            type: name,
+            result: `${x.result.ms} ms`,
+            note: note,
+          };
+        }));
       }
     } catch (e) {
       notyf.error(`파일을 읽어오지 못했습니다.<br>${e}`);
@@ -922,8 +964,6 @@ async function update_log_viewer() {
   try {
     let files = await invoke('get_file_list');
     let html = "<option selected disabled>파일 선택</option>";
-
-    console.log(files)
 
     for (let file of files) {
       html += `<option value='${file}'>${file}</option>`;
@@ -944,7 +984,7 @@ let entries = undefined;
 
 async function refresh_entries() {
   try {
-    entries = JSON.parse(await invoke('read_file', { fileName: "fsk-entry.json" }));
+    entries = JSON.parse(await invoke('read_file', { name: "fsk-entry.json" }));
   } catch (e) {
     if (e.toString().includes("os error 2")) {
       notyf.error(`엔트리 파일을 찾을 수 없습니다.`);
@@ -1027,7 +1067,7 @@ async function update_entry_table(success_msg, error_msg) {
   edited = edited.sort((a, b) => Number(a.number) - Number(b.number));
 
   try {
-    await invoke('write_entry', edited);
+    await invoke('write_entry', { data: JSON.stringify(edited, null, 2) });
     await refresh_entries();
 
     document.querySelectorAll('select.select-team').forEach(el => {
@@ -1037,7 +1077,7 @@ async function update_entry_table(success_msg, error_msg) {
 
     notyf.success(success_msg);
   } catch (e) {
-    notyf.error(`${error_msg}<br>${e.message}`);
+    notyf.error(`${error_msg}<br>${e}`);
   }
 
 }

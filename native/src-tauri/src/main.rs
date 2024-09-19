@@ -147,9 +147,9 @@ async fn get_file_list() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-async fn read_file(file_name: String) -> Result<String, String> {
+async fn read_file(name: String) -> Result<String, String> {
     let base_path = std::env::current_dir().unwrap();
-    let file_path = base_path.join(file_name.clone());
+    let file_path = base_path.join(name.clone());
     match fs::read_to_string(&file_path) {
         Ok(filedata) => Ok(filedata),
         Err(e) => Err(format!("Failed to read file: {}", e)),
@@ -168,7 +168,7 @@ async fn append_file(name: String, data: String) -> Result<String, String> {
             name
         )
     };
-    let file_path = base_path.join(file_name);
+    let file_path = base_path.join(file_name.clone());
 
     match OpenOptions::new()
         .append(true)
@@ -179,7 +179,7 @@ async fn append_file(name: String, data: String) -> Result<String, String> {
             if let Err(e) = std::io::Write::write_all(&mut file, data.as_bytes()) {
                 return Err(format!("Failed to append to file: {}", e));
             }
-            Ok(file_path.to_string_lossy().to_string())
+            Ok(file_name.to_string())
         }
         Err(e) => Err(format!("Failed to open file: {}", e)),
     }
@@ -190,10 +190,15 @@ async fn write_entry(data: String) -> Result<(), String> {
     let base_path = std::env::current_dir().unwrap();
     let file_path = base_path.join("fsk-entry.json");
 
-    match fs::write(file_path, serde_json::to_string_pretty(&data).unwrap()) {
+    match fs::write(file_path, data) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to write entry: {}", e)),
     }
+}
+
+#[tauri::command]
+fn open_url() {
+    open::that("https://github.com/luftaquila/fsk-traffic-control").unwrap();
 }
 
 /*******************************************************************************
@@ -215,6 +220,7 @@ fn main() {
             read_file,
             append_file,
             write_entry,
+            open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
