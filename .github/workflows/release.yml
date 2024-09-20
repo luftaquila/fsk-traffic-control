@@ -22,9 +22,9 @@ jobs:
       - run: |
           zip -j firmware-controller-${{ github.ref_name }}.zip controller/firmware.*
           zip -j firmware-sensor-${{ github.ref_name }}.zip sensor/firmware.*
+          zip -rj fsk-traffic-control-macos-arm64-{{ github.ref_name }}.app.zip build.fsk-traffic-control-macos-arm64/fsk-traffic-control.app
           mv build.fsk-traffic-control-windows-x64/fsk-traffic-control.exe fsk-traffic-control-windows-x64-${{ github.ref_name }}.exe
-          mv build.fsk-traffic-control-macos-arm64/fsk-traffic-control fsk-traffic-control-macos-arm64-${{ github.ref_name }}
-          mv build.fsk-traffic-control-linux-x64/fsk-traffic-control fsk-traffic-control-linux-x64-${{ github.ref_name }}
+          mv build.fsk-traffic-control-linux-x64/fsk-traffic-control fsk-traffic-control-linux-x64-${{ github.ref_name }}.AppImage
           mv native/fsk-entry.json fsk-entry.json
       - uses: ncipollo/release-action@v1
         with:
@@ -39,15 +39,18 @@ jobs:
           tag: ${{ github.ref_name }}
           body: |
             ## Note
+            ### Firmwares
             Use [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) to upload the firmware to the device.  
 
+            ### Desktop Application
             Before open the `fsk-traffic-control` executable, download `fsk-entry.json` and put it in the same directory with the executable.
 
             In MacOS, run the following command before open the installed `fsk-traffic-control` for the first time.\
-            Unless, it will say `"fsk-traffic-control" is damaged and can’t be opened.` since the packages are not signed
+            Unless, it will say `"fsk-traffic-control" is damaged and can’t be opened.` since the packages are not signed.
 
             ```sh
-            xattr -c /Applications/fsk-traffic-control.app
+            xattr -c /path/to/fsk-traffic-control.app
+            chmod +x /path/to/fsk-traffic-control.app/Contents/MacOS/fsk-traffic-control
             ```
 
             ## Changelogs

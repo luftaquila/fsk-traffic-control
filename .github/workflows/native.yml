@@ -46,7 +46,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: build.fsk-traffic-control-macos-arm64
-        path: native/src-tauri/target/release/fsk-traffic-control
+        path: native/src-tauri/target/release/bundle/macos/fsk-traffic-control*.app
 
   build-linux:
     name: Build Linux
@@ -68,4 +68,4 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: build.fsk-traffic-control-linux-x64
-        path: native/src-tauri/target/release/fsk-traffic-control
+        path: native/src-tauri/target/release/bundle/appimage/fsk-traffic-control*.AppImage
