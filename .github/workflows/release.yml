@@ -41,6 +41,9 @@ jobs:
             ## Note
             ### Firmwares
             Use [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) to upload the firmware to the device.  
+            All controllers and sensors must have their ID in the flash memeory. Ensure that the value `0xBADACAFE` is stored at the memory address 0x0803FF00 and device ID at 0x0803FF04.
+
+            The device IDs assigned to the sensors are 1 ~ 200, and 201 ~ 254 for controllers. ID 0 and 255 should be avoided, as these values are reserved for `ID_BROADCAST` and `ID_INVALID`.
 
             ### Desktop Application
             Before open the `fsk-traffic-control` executable, download `fsk-entry.json` and put it in the same directory with the executable.

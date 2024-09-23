@@ -1,30 +1,44 @@
 # Formula Student Korea Traffic Controller
 
-## Usage
+## Usage (TL;DR)
+
+1. Download the `fsk-traffic-control` application and the `fsk-entry.json` at the [Releases](https://github.com/luftaquila/fsk-traffic-control/releases).
+2. Put the application and the `fsk-entry.json` in the same directory.
+3. Run `fsk-traffic-control` and update your entry in the application.
+4. Connect controller to the PC and click the `Connect Controller` button.
+5. Set sensor IDs to use and click the `Configure sensors` button.
+6. Power up sensors to perform a time sync between the controller and sensors.
+7. Set the event name and the participating teams.
+8. All ready! Turn on the green light.
 
 ## Do It Yourself!
 DIY section describes how to make the hardwares and upload firmware to it, and how to build the desktop application.
 
-### Build devices
+### Build your devices
 
-#### BOM
+#### Bill of Materials (BOM)
 
-* Controller
-    * TODO
-* Sensor
-    * TODO
+TODO
 
-#### Schematics
+* [Controller](https://github.com/luftaquila/fsk-traffic-control/tree/main/device/controller/schematics/bom)
+* [Sensor](https://github.com/luftaquila/fsk-traffic-control/tree/main/device/sensor/schematics/bom)
 
-* Controller
-    * TODO
-* Sensor
-    * TODO
+#### Schematics (KiCAD)
+
+TODO
+
+* [Controller](https://github.com/luftaquila/fsk-traffic-control/tree/main/device/controller/schematics)
+* [Sensor](https://github.com/luftaquila/fsk-traffic-control/tree/main/device/sensor/schematics)
+
+#### 3D printed housing design file (Fusion 360)
+
+* [Controller](https://github.com/luftaquila/fsk-traffic-control/tree/main/device/controller/3d)
+* [Sensor](https://github.com/luftaquila/fsk-traffic-control/tree/main/device/sensor/3d)
 
 ### Upload firmware to the devices
 
-#### Use prebuilt firmware
-If you want to use the original firmware as-is, download the prebuilt firmware at the [Releases](https://github.com/luftaquila/fsk-traffic-control/releases) and use [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) to upload firmware elf to the devices.
+> [!TIP]
+> If you want to use the original firmware as-is, download the prebuilt firmware at the [Releases](https://github.com/luftaquila/fsk-traffic-control/releases) and use [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) to upload firmware elf to the devices.
 
 #### Prerequisites
 
@@ -65,30 +79,35 @@ If you want to use the original firmware as-is, download the prebuilt firmware a
     make program
     ```
 
-If you want to get the debug outputs, upload debug mode firmware by `make debug` command and connect the USB to UART converter to the devices' USART1 port (PB6, PB7).
+> [!NOTE]
+> If you want to get the debug outputs, upload debug mode firmware by `make debug` command and connect the USB to UART converter to the device's USART1 port (PB6, PB7).
 
 ### Desktop Application
 
+> [!TIP]
+> If you want to use the original application as-is, download the prebuilt binary and follow the instructions at the [Releases](https://github.com/luftaquila/fsk-traffic-control/releases).
+
+* Note: not yet tested at Linux!
+
 #### Prerequisites
 
-1. Node.js >= v20
-    * [Download Node.js](https://nodejs.org/en/download/package-manager)
-
-2. Clone repository and install dependencies
-```sh
-git clone https://github.com/luftaquila/fsk-traffic-control.git --recursive
-cd fsk-traffic-control/native
-npm install
-```
+1. [Node.js](https://nodejs.org/en/download/package-manager) >= v20
+2. [Rust](https://www.rust-lang.org/tools/install) >= 1.81.0
+3. Clone the repository and install dependencies
+    ```sh
+    git clone https://github.com/luftaquila/fsk-traffic-control.git --recursive
+    cd fsk-traffic-control/native
+    npm install
+    ```
 
 #### Run
 
 ```sh
-npm start
+npm run tauri dev
 ```
 
 #### Build
 
 ```sh
-npm run build
+npm run tauri build
 ```
