@@ -138,7 +138,11 @@ async fn get_file_list() -> Result<Vec<String>, String> {
             let result: Vec<String> = entries
                 .filter_map(|entry| entry.ok())
                 .filter_map(|entry| entry.file_name().into_string().ok())
-                .filter(|name| name.to_lowercase().starts_with("fsk") && name != "fsk-entry.json")
+                .filter(|name| {
+                    name.to_lowercase().starts_with("fsk")
+                        && name.to_lowercase().ends_with(".json")
+                        && name != "fsk-entry.json"
+                })
                 .collect();
             Ok(result)
         }

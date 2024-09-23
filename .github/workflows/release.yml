@@ -22,10 +22,10 @@ jobs:
       - run: |
           zip -j firmware-controller-${{ github.ref_name }}.zip controller/firmware.*
           zip -j firmware-sensor-${{ github.ref_name }}.zip sensor/firmware.*
-          zip -rj fsk-traffic-control-macos-arm64-{{ github.ref_name }}.app.zip build.fsk-traffic-control-macos-arm64/fsk-traffic-control.app
+          zip -rj fsk-traffic-control-macos-arm64-${{ github.ref_name }}.app.zip build.fsk-traffic-control-macos-arm64/fsk-traffic-control.app
           mv build.fsk-traffic-control-windows-x64/fsk-traffic-control.exe fsk-traffic-control-windows-x64-${{ github.ref_name }}.exe
-          mv build.fsk-traffic-control-linux-x64/fsk-traffic-control fsk-traffic-control-linux-x64-${{ github.ref_name }}.AppImage
-          mv native/fsk-entry.json fsk-entry.json
+          mv build.fsk-traffic-control-linux-x64/fsk-traffic-control*.AppImage fsk-traffic-control-linux-x64-${{ github.ref_name }}.AppImage
+          mv native/src-tauri/fsk-entry.json fsk-entry.json
       - uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
@@ -43,7 +43,7 @@ jobs:
             Use [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) to upload the firmware to the device.  
             All controllers and sensors must have their ID in the flash memeory. Ensure that the value `0xBADACAFE` is stored at the memory address 0x0803FF00 and device ID at 0x0803FF04.
 
-            The device IDs assigned to the sensors are 1 ~ 200, and 201 ~ 254 for controllers. ID 0 and 255 should be avoided, as these values are reserved for `ID_BROADCAST` and `ID_INVALID`.
+            The device IDs assigned to the sensors are 1 ~ 200, and 201 ~ 254 for controllers. ID 0 and 255 should be avoided as these values are reserved for `ID_BROADCAST` and `ID_INVALID`.
 
             ### Desktop Application
             Before open the `fsk-traffic-control` executable, download `fsk-entry.json` and put it in the same directory with the executable.
