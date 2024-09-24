@@ -987,7 +987,7 @@ async function refresh_entries() {
     entries = JSON.parse(await invoke('read_file', { name: "fsk-entry.json" }));
   } catch (e) {
     if (e.toString().includes("os error 2")) {
-      notyf.error(`엔트리 파일을 찾을 수 없습니다.`);
+      notyf.error(`엔트리 파일을 찾을 수 없습니다.<br>${e.toString()}`);
     } else {
       notyf.error(`엔트리 파일이 손상되었습니다.<br>${e.toString()}`);
     }

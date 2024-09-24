@@ -20,8 +20,8 @@ jobs:
       - id: changes
         uses: simbo/changes-between-tags-action@v1
       - run: |
-          zip -rj fsk-traffic-control-macos-arm64-${{ github.ref_name }}.app.zip build.fsk-traffic-control-macos-arm64/fsk-traffic-control.app
           zip -r firmware-${{ github.ref_name }}.zip controller sensor
+          (cd build.fsk-traffic-control-macos-arm64 && zip -r ../fsk-traffic-control-macos-arm64-${{ github.ref_name }}.app.zip .)
           mv build.fsk-traffic-control-windows-x64/fsk-traffic-control.exe fsk-traffic-control-windows-x64-${{ github.ref_name }}.exe
           mv build.fsk-traffic-control-linux-x64/fsk-traffic-control*.AppImage fsk-traffic-control-linux-x64-${{ github.ref_name }}.AppImage
           mv native/src-tauri/fsk-entry.json fsk-entry.json
@@ -49,11 +49,12 @@ jobs:
             Before open the `fsk-traffic-control` executable, download `fsk-entry.json` and put it in the same directory with the executable.
 
             In MacOS, run the following command before open the installed `fsk-traffic-control` for the first time.\
-            Unless, it will say `"fsk-traffic-control" is damaged and can’t be opened.` since the packages are not signed.
+            Unless, it will say `"fsk-traffic-control" is damaged and can’t be opened.` because the packages are not signed.
 
             ```sh
-            xattr -c /path/to/fsk-traffic-control.app
-            chmod +x /path/to/fsk-traffic-control.app/Contents/MacOS/fsk-traffic-control
+            cd /path/to/fsk-traffic-control
+            xattr -c fsk-traffic-control.app
+            chmod +x fsk-traffic-control.app/Contents/MacOS/fsk-traffic-control
             ```
 
             ## Changelogs

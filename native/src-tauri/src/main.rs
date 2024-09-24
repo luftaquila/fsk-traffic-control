@@ -5,6 +5,7 @@ use serialport::{SerialPort, SerialPortType};
 use std::fs::{self, OpenOptions};
 use std::io::Read;
 use std::io::Write;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -130,10 +131,32 @@ fn serial_listen(app_handle: tauri::AppHandle, port: Arc<Mutex<Option<Box<dyn Se
 /*******************************************************************************
 * File manipulators                                                            *
 *******************************************************************************/
+fn get_base_path() -> PathBuf {
+    let exe_path = std::env::current_exe().unwrap();
+
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    let base_path = exe_path.parent().unwrap();
+
+    // exe_path is fsk-traffic-control.app/Contents/MacOS/fsk-traffic-control
+    #[cfg(target_os = "macos")]
+    let base_path = exe_path
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+
+    base_path.to_path_buf()
+}
+
 #[tauri::command]
 async fn get_file_list() -> Result<Vec<String>, String> {
-    let base_path = std::env::current_dir().unwrap();
-    match fs::read_dir(base_path) {
+    let base_path = get_base_path();
+
+    match fs::read_dir(&base_path) {
         Ok(entries) => {
             let result: Vec<String> = entries
                 .filter_map(|entry| entry.ok())
@@ -146,23 +169,32 @@ async fn get_file_list() -> Result<Vec<String>, String> {
                 .collect();
             Ok(result)
         }
-        Err(e) => Err(format!("Failed to read directory: {}", e)),
+        Err(e) => Err(format!(
+            "Failed to read directory {}: {}",
+            base_path.to_str().unwrap(),
+            e
+        )),
     }
 }
 
 #[tauri::command]
 async fn read_file(name: String) -> Result<String, String> {
-    let base_path = std::env::current_dir().unwrap();
+    let base_path = get_base_path();
     let file_path = base_path.join(name.clone());
+
     match fs::read_to_string(&file_path) {
         Ok(filedata) => Ok(filedata),
-        Err(e) => Err(format!("Failed to read file: {}", e)),
+        Err(e) => Err(format!(
+            "Failed to read file {}: {}",
+            file_path.to_str().unwrap(),
+            e
+        )),
     }
 }
 
 #[tauri::command]
 async fn append_file(name: String, data: String) -> Result<String, String> {
-    let base_path = std::env::current_dir().unwrap();
+    let base_path = get_base_path();
     let file_name = if name == "fsk-log.json" {
         "fsk-log.json".to_string()
     } else {
@@ -191,7 +223,7 @@ async fn append_file(name: String, data: String) -> Result<String, String> {
 
 #[tauri::command]
 async fn write_entry(data: String) -> Result<(), String> {
-    let base_path = std::env::current_dir().unwrap();
+    let base_path = get_base_path();
     let file_path = base_path.join("fsk-entry.json");
 
     match fs::write(file_path, data) {
