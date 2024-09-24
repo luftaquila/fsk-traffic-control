@@ -17,8 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
-      - id: changes
-        uses: simbo/changes-between-tags-action@v1
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: |
           zip -r firmware-${{ github.ref_name }}.zip controller sensor
           (cd build.fsk-traffic-control-macos-arm64 && zip -r ../fsk-traffic-control-macos-arm64-${{ github.ref_name }}.app.zip .)
@@ -58,4 +61,4 @@ jobs:
             ```
 
             ## Changelogs
-            ${{ steps.changes.outputs.changes }}
+            ${{steps.github_release.outputs.changelog}}
