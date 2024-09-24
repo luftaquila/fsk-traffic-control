@@ -35,19 +35,39 @@ jobs:
       - name: build controller firmware
         run: |
           cd device/controller/firmware
+
+          mkdir -p actions/release
           make GCC_PATH=../../../toolchain/arm-none-eabi/bin
+          for file in build/firmware.*; do mv "$file" "${file/firmware./firmware-release.}"; done
+          mv build/firmware-release.* actions/release
+
+          make clean
+          mkdir -p actions/debug
+          make GCC_PATH=../../../toolchain/arm-none-eabi/bin DEBUG=1
+          for file in build/firmware.*; do mv "$file" "${file/firmware./firmware-debug.}"; done
+          mv build/firmware-debug.* actions/debug
 
       - name: build sensor firmware
         run: |
           cd device/sensor/firmware
+
+          mkdir -p actions/release
           make GCC_PATH=../../../toolchain/arm-none-eabi/bin
+          for file in build/firmware.*; do mv "$file" "${file/firmware./firmware-release.}"; done
+          mv build/firmware-release.* actions/release
+
+          make clean
+          mkdir -p actions/debug
+          make GCC_PATH=../../../toolchain/arm-none-eabi/bin DEBUG=1
+          for file in build/firmware.*; do mv "$file" "${file/firmware./firmware-debug.}"; done
+          mv build/firmware-debug.* actions/debug
 
       - uses: actions/upload-artifact@v4
         with:
           name: controller
-          path: device/controller/firmware/build/firmware.*
+          path: device/controller/firmware/actions
 
       - uses: actions/upload-artifact@v4
         with:
           name: sensor
-          path: device/sensor/firmware/build/firmware.*
+          path: device/sensor/firmware/actions
