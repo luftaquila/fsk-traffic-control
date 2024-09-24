@@ -1,227 +1,267 @@
 [
   {
-    "number": "101",
-    "univ": "국민대학교",
-    "team": "KOOKMIN RACING KF-22"
+    "number": "0",
+    "univ": "Test_Univ.",
+    "team": "Test_Team"
   },
   {
-    "number": "102",
-    "univ": "국민대학교",
-    "team": "KUST"
-  },
-  {
-    "number": "103",
-    "univ": "금오공과대학교",
-    "team": "Auto-Mania"
-  },
-  {
-    "number": "104",
-    "univ": "홍익대학교",
-    "team": "GARAGE"
-  },
-  {
-    "number": "105",
-    "univ": "경희대학교",
-    "team": "KHARS"
-  },
-  {
-    "number": "106",
-    "univ": "강원대학교",
-    "team": "Team Monster"
-  },
-  {
-    "number": "107",
-    "univ": "전주대학교",
-    "team": "Jm-F"
-  },
-  {
-    "number": "108",
-    "univ": "경기대학교",
-    "team": "KURC"
-  },
-  {
-    "number": "109",
-    "univ": "계명대학교",
-    "team": "SPEEDING"
-  },
-  {
-    "number": "110",
-    "univ": "계명대학교",
-    "team": "SPEEDING-J"
-  },
-  {
-    "number": "111",
+    "number": "2",
     "univ": "공주대학교",
     "team": "KUMA"
   },
   {
-    "number": "112",
-    "univ": "동아대학교",
-    "team": "동아자동차연구회"
-  },
-  {
-    "number": "113",
-    "univ": "부경대학교",
-    "team": "Team D.O.S"
-  },
-  {
-    "number": "114",
-    "univ": "부산대학교",
-    "team": "Auto_Lab"
-  },
-  {
-    "number": "115",
-    "univ": "부산대학교",
-    "team": "Auto_Lab_FP"
-  },
-  {
-    "number": "116",
-    "univ": "선문대학교",
-    "team": "G90B"
-  },
-  {
-    "number": "117",
-    "univ": "신한대학교",
-    "team": "Team_SHOT_F"
-  },
-  {
-    "number": "118",
-    "univ": "영남이공대학교",
-    "team": "CR&DE"
-  },
-  {
-    "number": "119",
-    "univ": "인천대학교",
-    "team": "INU Racing"
-  },
-  {
-    "number": "120",
-    "univ": "전북대학교",
-    "team": "메카트로닉스"
-  },
-  {
-    "number": "121",
-    "univ": "창원대학교",
-    "team": "SKID"
-  },
-  {
-    "number": "122",
-    "univ": "충남대학교",
-    "team": "바퀴네개F (wheel_4)"
-  },
-  {
-    "number": "123",
-    "univ": "한경대학교",
-    "team": "Team-SV_Formula"
-  },
-  {
-    "number": "124",
-    "univ": "한라대학교",
-    "team": "FLETA FORMULA"
-  },
-  {
-    "number": "125",
-    "univ": "한양대, 연세대",
-    "team": "RACE"
-  },
-  {
-    "number": "126",
-    "univ": "한양대학교",
-    "team": "baqu4"
-  },
-  {
-    "number": "127",
-    "univ": "한양사이버대학교",
-    "team": "터보 달팽이"
-  },
-  {
-    "number": "128",
-    "univ": "홍익대학교",
-    "team": "Light_On_C"
-  },
-  {
-    "number": "129",
-    "univ": "고려대학교",
-    "team": "어울수레"
-  },
-  {
-    "number": "130",
-    "univ": "국민대학교",
-    "team": "KOOKMIN RACING KEF-22"
-  },
-  {
-    "number": "131",
-    "univ": "단국대학교",
-    "team": "Run2X"
-  },
-  {
-    "number": "132",
+    "number": "3",
     "univ": "동국대학교",
     "team": "Team KART"
   },
   {
-    "number": "133",
-    "univ": "명지대학교",
-    "team": "T.N.T"
+    "number": "4",
+    "univ": "영남대학교",
+    "team": "YUSAE"
   },
   {
-    "number": "134",
-    "univ": "서울과학기술대학교",
-    "team": "MIP"
+    "number": "5",
+    "univ": "깅기대학교",
+    "team": "KURC_EF"
   },
   {
-    "number": "135",
-    "univ": "숭실대학교",
-    "team": "SSARA"
-  },
-  {
-    "number": "136",
+    "number": "6",
     "univ": "아주대학교",
     "team": "A-FA"
   },
   {
-    "number": "137",
-    "univ": "영남대학교",
-    "team": "YUSAE_Racing"
+    "number": "7",
+    "univ": "강릉원주대학교",
+    "team": "GHOST"
   },
   {
-    "number": "138",
+    "number": "8",
+    "univ": "강원대학교",
+    "team": "아우토반"
+  },
+  {
+    "number": "9",
+    "univ": "강원대학교",
+    "team": "TEAM MONSTER"
+  },
+  {
+    "number": "10",
+    "univ": "경상국립대학교",
+    "team": "Car-Tech"
+  },
+  {
+    "number": "11",
+    "univ": "금오공과대학교",
+    "team": "Auto-Mania"
+  },
+  {
+    "number": "12",
+    "univ": "동아대학교",
+    "team": "동아자동차연구회 DASC"
+  },
+  {
+    "number": "13",
+    "univ": "부경대학교",
+    "team": "Team D.O.S"
+  },
+  {
+    "number": "14",
+    "univ": "부산대학교",
+    "team": "Auto_Lab_C"
+  },
+  {
+    "number": "15",
+    "univ": "부산대학교",
+    "team": "PARA"
+  },
+  {
+    "number": "16",
+    "univ": "순천향대학교",
+    "team": "무한질주"
+  },
+  {
+    "number": "17",
+    "univ": "안동대학교",
+    "team": "TeamMoto"
+  },
+  {
+    "number": "18",
+    "univ": "영남이공대학교",
+    "team": "CR&DE"
+  },
+  {
+    "number": "19",
+    "univ": "인천대학교",
+    "team": "INU Racing"
+  },
+  {
+    "number": "20",
+    "univ": "전북대학교",
+    "team": "MEKA"
+  },
+  {
+    "number": "21",
+    "univ": "조선대학교",
+    "team": "대자연"
+  },
+  {
+    "number": "22",
+    "univ": "창원대학교",
+    "team": "SKID"
+  },
+  {
+    "number": "23",
+    "univ": "충남대학교",
+    "team": "바퀴네개"
+  },
+  {
+    "number": "24",
+    "univ": "충북대학교",
+    "team": "TACHYON"
+  },
+  {
+    "number": "25",
+    "univ": "한국공학대학교",
+    "team": "TEAM NSSUR"
+  },
+  {
+    "number": "26",
+    "univ": "한국과학기술원",
+    "team": "질주"
+  },
+  {
+    "number": "27",
+    "univ": "한라대학교",
+    "team": "FLETA FORMULA"
+  },
+  {
+    "number": "28",
+    "univ": "한라대학교",
+    "team": "FLETA FORMULA J"
+  },
+  {
+    "number": "29",
+    "univ": "한밭대학교",
+    "team": "TeamMiralce-F"
+  },
+  {
+    "number": "30",
+    "univ": "한양대학교",
+    "team": "baqu4"
+  },
+  {
+    "number": "31",
+    "univ": "한양사이버대학교,한양대학교",
+    "team": "TURBO RACE"
+  },
+  {
+    "number": "32",
+    "univ": "홍익대학교",
+    "team": "GARAGE"
+  },
+  {
+    "number": "33",
+    "univ": "건국대학교",
+    "team": "Team K.A.I."
+  },
+  {
+    "number": "34",
+    "univ": "경희대학교",
+    "team": "KHARS"
+  },
+  {
+    "number": "35",
+    "univ": "계명대학교",
+    "team": "SPEEDING"
+  },
+  {
+    "number": "36",
+    "univ": "고려대학교",
+    "team": "어울수레"
+  },
+  {
+    "number": "37",
+    "univ": "국민대학교",
+    "team": "KOOKMIN RACING KEF-24"
+  },
+  {
+    "number": "38",
+    "univ": "국민대학교",
+    "team": "KUST EV"
+  },
+  {
+    "number": "39",
+    "univ": "단국대학교",
+    "team": "Run2X"
+  },
+  {
+    "number": "40",
+    "univ": "명지대학교",
+    "team": "T.N.T"
+  },
+  {
+    "number": "41",
+    "univ": "부산대학교",
+    "team": "Auto_Lab_E"
+  },
+  {
+    "number": "42",
+    "univ": "서울과학기술대학교",
+    "team": "MIP"
+  },
+  {
+    "number": "43",
+    "univ": "숭실대학교",
+    "team": "SSARA"
+  },
+  {
+    "number": "44",
     "univ": "영남대학교",
     "team": "CMDM"
   },
   {
-    "number": "139",
-    "univ": "울산대, 고려대, 호서대",
-    "team": "Team KUHO"
-  },
-  {
-    "number": "140",
-    "univ": "중부대학교",
-    "team": "J-gear"
-  },
-  {
-    "number": "141",
+    "number": "45",
     "univ": "중앙대학교",
     "team": "NstopO"
   },
   {
-    "number": "142",
+    "number": "46",
     "univ": "창원대학교",
-    "team": "SKID-E"
+    "team": "E-SKID"
   },
   {
-    "number": "143",
+    "number": "47",
+    "univ": "한국교통대학교",
+    "team": "Challenger"
+  },
+  {
+    "number": "48",
     "univ": "한양대학교",
     "team": "FOURTOR"
   },
   {
-    "number": "144",
+    "number": "49",
+    "univ": "한양대학교",
+    "team": "RACE"
+  },
+  {
+    "number": "50",
     "univ": "호서대학교",
     "team": "CHALLENGER"
   },
   {
-    "number": "145",
+    "number": "51",
     "univ": "홍익대학교",
-    "team": "Light_On_E"
+    "team": "LIGHT ON"
+  },
+  {
+    "number": "52",
+    "univ": "Guangzhou City University of Technology",
+    "team": "HuaQi Racing"
+  },
+  {
+    "number": "53",
+    "univ": "Guilin University of Aerospace Technology",
+    "team": "HV Racing Team"
   }
 ]
